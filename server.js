@@ -13,6 +13,9 @@ app.set('views', path.join(__dirname, 'views'));
 
 // --- Static files ---
 app.use(express.static(path.join(__dirname, 'public')));
+if (process.env.VERCEL) {
+  app.use('/uploads', express.static(path.join('/tmp', 'uploads')));
+}
 
 // --- Body parsers ---
 app.use(express.json());

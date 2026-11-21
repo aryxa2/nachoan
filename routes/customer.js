@@ -10,7 +10,10 @@ const { generateOrderNumber, generateToken, normalizePhone, now, formatDate, get
 // Multer storage for payment proofs
 const paymentStorage = multer.diskStorage({
   destination: (req, file, cb) => {
-    const dir = path.join(__dirname, '..', 'storage', 'payments');
+    let dir = path.join(__dirname, '..', 'storage', 'payments');
+    if (process.env.VERCEL) {
+      dir = path.join('/tmp', 'payments');
+    }
     if (!fs.existsSync(dir)) {
       fs.mkdirSync(dir, { recursive: true });
     }
@@ -450,7 +453,10 @@ router.get('/order/:token/proof/:id', (req, res) => {
     return res.status(403).send('Akses tidak diizinkan.');
   }
 
-  const filePath = path.join(__dirname, '..', 'storage', 'payments', submission.file_path);
+  let filePath = path.join(__dirname, '..', 'storage', 'payments', submission.file_path);
+  if (process.env.VERCEL && !fs.existsSync(filePath)) {
+    filePath = path.join('/tmp', 'payments', submission.file_path);
+  }
   if (!fs.existsSync(filePath)) {
     return res.status(404).send('File bukti transfer tidak ditemukan di server.');
   }

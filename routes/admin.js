@@ -11,10 +11,14 @@ const { now, formatDate, getStatusInfo } = require('../lib/helpers');
 const adminUploadStorage = multer.diskStorage({
   destination: (req, file, cb) => {
     let dir = path.join(__dirname, '..', 'public', 'uploads');
-    if (file.fieldname === 'qris_file') {
-      dir = path.join(__dirname, '..', 'public', 'images');
-    } else if (file.fieldname === 'slide_image') {
-      dir = path.join(__dirname, '..', 'public', 'uploads', 'carousel');
+    if (process.env.VERCEL) {
+      dir = path.join('/tmp', 'uploads');
+    } else {
+      if (file.fieldname === 'qris_file') {
+        dir = path.join(__dirname, '..', 'public', 'images');
+      } else if (file.fieldname === 'slide_image') {
+        dir = path.join(__dirname, '..', 'public', 'uploads', 'carousel');
+      }
     }
     if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
     cb(null, dir);
