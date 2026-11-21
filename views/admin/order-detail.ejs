@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title><%= title %></title>
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="icon" type="image/jpeg" href="/images/logo.jpg">
+</head>
+<body>
+
+<div class="admin-layout">
+  <%- include('sidebar') %>
+
+  <main class="admin-main">
+    <div style="margin-bottom: 20px;">
+      <a href="/admin/orders" class="btn btn-outline btn-sm">&lsaquo; Kembali ke Daftar Pesanan</a>
+    </div>
+
+    <!-- Alert Messages -->
+    <% if (typeof req !== 'undefined' && req.query) { %>
+      <% if (req.query.msg === 'approved') { %>
+        <div style="background: #dcfce7; border: 1px solid #86efac; color: #166534; padding: 12px 16px; border-radius: var(--radius-sm); margin-bottom: 20px; font-weight: 700;">
+          ✔ Pembayaran pesanan berhasil disetujui (Status menjadi PAID).
+        </div>
+      <% } else if (req.query.msg === 'rejected') { %>
+        <div style="background: #fee2e2; border: 1px solid #fca5a5; color: #991b1b; padding: 12px 16px; border-radius: var(--radius-sm); margin-bottom: 20px; font-weight: 700;">
+          ⚠️ Bukti pembayaran telah ditolak. Alasan penolakan telah dicatat.
+        </div>
+      <% } else if (req.query.msg === 'status_updated') { %>
+        <div style="background: #e0e7ff; border: 1px solid #c7d2fe; color: #3730a3; padding: 12px 16px; border-radius: var(--radius-sm); margin-bottom: 20px; font-weight: 700;">
+          ✔ Status operasional pesanan berhasil diperbarui.
+        </div>
+      <% } else if (req.query.error) { %>
+        <div style="background: #fee2e2; border: 1px solid #fca5a5; color: #991b1b; padding: 12px 16px; border-radius: var(--radius-sm); margin-bottom: 20px; font-weight: 700;">
+          <%= req.query.error %>
+        </div>
+      <% } %>
+    <% } %>
+
+    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 24px; flex-wrap: wrap; gap: 16px;">
+      <div>
+        <h1 style="font-size: 26px; color: var(--text-dark);">Pesanan <%= order.order_number %></h1>
+        <p style="color: var(--text-muted); font-size: 13px;">Dibuat: <%= formatDate(order.created_at) %> &bull; Terakhir Update: <%= formatDate(order.updated_at) %></p>
+      </div>
+
+      <% const sInfo = getStatusInfo(order.order_status, order.payment_status); %>
+      <div style="display: flex; gap: 8px; align-items: center;">
+        <span class="badge <%= order.payment_status === 'PAID' ? 'badge-green' : (order.payment_status === 'REJECTED' ? 'badge-red' : 'badge-yellow') %>" style="font-size: 14px; padding: 6px 14px;">
+          Pembayaran: <%= order.payment_status %>
+        </span>
+        <span class="badge" style="background: <%= sInfo.bg %>; color: <%= sInfo.text %>; font-size: 14px; padding: 6px 14px;">
+          <%= sInfo.label %>
+        </span>
+      </div>
+    </div>
+
+    <div style="display: grid; grid-template-columns: 1fr; gap: 24px;" class="detail-grid">
+      
+      <!-- Left Column: Order Items & Customer -->
+      <div>
+        <!-- Items Box -->
+        <div class="card">
+          <h2 style="font-size: 18px; margin-bottom: 16px; border-bottom: 1px solid var(--border-color); padding-bottom: 10px;">
+            Item Pesanan
+          </h2>
+
+          <div style="display: flex; flex-direction: column; gap: 12px; margin-bottom: 20px;">
+            <% for (const item of items) { %>
+              <div style="display: flex; justify-content: space-between; padding-bottom: 10px; border-bottom: 1px solid #F3F4F6;">
+                <div>
+                  <div style="font-weight: 700; font-size: 15px;">
+                    <%= item.quantity %>× <%= item.name %>
+                    <% if (item.is_gift) { %>
+                      <span class="badge badge-green" style="font-size: 11px;">PROMO BONUS Rp0</span>
+                    <% } %>
+                  </div>
+                  <% if (item.variant) { %>
+                    <div style="font-size: 12px; color: var(--primary); font-weight: 700;">
+                      Level Pedas: <%= item.variant %>
+                    </div>
+                  <% } %>
+                  <% if (item.components) { %>
+                    <div style="font-size: 12px; color: var(--text-muted);">
+                      Isi Komponen: <%= JSON.parse(item.components).join(', ') %>
+                    </div>
+                  <% } %>
+                </div>
+                <div style="font-weight: 700; font-size: 15px;">
+                  <%= formatRupiah(item.price * item.quantity) %>
+                </div>
+              </div>
+            <% } %>
+          </div>
+
+          <!-- Totals -->
+          <div style="background: #FFF8F0; padding: 14px; border-radius: var(--radius-sm); font-size: 14px; display: flex; flex-direction: column; gap: 6px;">
+            <div style="display: flex; justify-content: space-between;">
+              <span style="color: var(--text-muted);">Subtotal</span>
+              <span style="font-weight: 700;"><%= formatRupiah(order.subtotal) %></span>
+            </div>
+            <% if (order.discount > 0) { %>
+              <div style="display: flex; justify-content: space-between; color: var(--accent-green); font-weight: 700;">
+                <span>Diskon (<%= order.promo_code || 'Voucher' %>)</span>
+                <span>-<%= formatRupiah(order.discount) %></span>
+              </div>
+            <% } %>
+            <div style="display: flex; justify-content: space-between;">
+              <span style="color: var(--text-muted);">Ongkir (<%= order.method === 'delivery' ? 'Delivery' : 'Pickup' %>)</span>
+              <span style="font-weight: 700;"><%= formatRupiah(order.delivery_fee) %></span>
+            </div>
+            <div style="border-top: 1.5px dashed var(--border-color); padding-top: 10px; margin-top: 6px; display: flex; justify-content: space-between; align-items: baseline;">
+              <span style="font-weight: 800; font-size: 16px;">Total Pesanan</span>
+              <span style="font-weight: 800; font-size: 20px; color: var(--primary);"><%= formatRupiah(order.total) %></span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Customer & Delivery -->
+        <div class="card">
+          <h2 style="font-size: 18px; margin-bottom: 16px; border-bottom: 1px solid var(--border-color); padding-bottom: 10px;">
+            Data Pemesan & Pengantaran
+          </h2>
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px; font-size: 14px;">
+            <div>
+              <span style="color: var(--text-muted); font-size: 12px; display: block;">Nama Pelanggan</span>
+              <strong><%= order.customer_name %></strong>
+            </div>
+            <div>
+              <span style="color: var(--text-muted); font-size: 12px; display: block;">No. WhatsApp</span>
+              <strong><%= order.customer_phone %></strong>
+              <% const cleanWa = order.customer_phone.replace(/[^0-9]/g, ''); %>
+              <a href="https://wa.me/<%= cleanWa %>" target="_blank" style="margin-left: 8px; color: #16a34a; font-weight: 700; font-size: 12px;">Chat WA ➔</a>
+            </div>
+            <div>
+              <span style="color: var(--text-muted); font-size: 12px; display: block;">Metode</span>
+              <strong><%= order.method === 'delivery' ? 'Delivery (Diantar)' : 'Pickup (Ambil Sendiri)' %></strong>
+            </div>
+            <div>
+              <span style="color: var(--text-muted); font-size: 12px; display: block;">Catatan Pembeli</span>
+              <em><%= order.notes || '-' %></em>
+            </div>
+            <% if (order.method === 'delivery') { %>
+              <div style="grid-column: 1 / -1;">
+                <span style="color: var(--text-muted); font-size: 12px; display: block;">Alamat Pengantaran</span>
+                <div style="background: #F9FAFB; padding: 10px; border-radius: 6px; border: 1px solid #E5E7EB; margin-top: 4px;">
+                  <%= order.address %>
+                </div>
+              </div>
+            <% } %>
+          </div>
+        </div>
+
+        <!-- History Log -->
+        <div class="card">
+          <h2 style="font-size: 18px; margin-bottom: 14px;">Audit Trail & Riwayat Pesanan</h2>
+          <div style="display: flex; flex-direction: column; gap: 10px;">
+            <% for (const h of history) { %>
+              <div style="font-size: 13px; border-left: 3px solid var(--primary); padding-left: 12px;">
+                <div style="font-weight: 700;"><%= h.reason || (h.field + ': ' + h.new_value) %></div>
+                <div style="color: var(--text-muted); font-size: 12px;">
+                  <%= formatDate(h.created_at) %> &bull; Aktor: <strong><%= h.actor %></strong>
+                </div>
+              </div>
+            <% } %>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right Column: Verification & Status Actions -->
+      <div>
+        
+        <!-- Payment Verification Panel -->
+        <div class="card">
+          <h2 style="font-size: 18px; margin-bottom: 14px; border-bottom: 1px solid var(--border-color); padding-bottom: 10px;">
+            Verifikasi Pembayaran QRIS
+          </h2>
+
+          <% const latestSub = submissions.length > 0 ? submissions[0] : null; %>
+          <% if (!latestSub) { %>
+            <div style="background: #fee2e2; padding: 14px; border-radius: var(--radius-sm); font-size: 13px; color: #991b1b; margin-bottom: 16px;">
+              Pelanggan belum mengunggah bukti pembayaran QRIS.
+            </div>
+          <% } else { %>
+            <!-- Submission Preview -->
+            <div style="margin-bottom: 20px;">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                <span style="font-weight: 700; font-size: 14px;">Bukti Versi #<%= latestSub.version %></span>
+                <span class="badge <%= latestSub.status === 'approved' ? 'badge-green' : (latestSub.status === 'rejected' ? 'badge-red' : 'badge-yellow') %>">
+                  <%= latestSub.status.toUpperCase() %>
+                </span>
+              </div>
+              <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 12px;">
+                Diupload pada: <%= formatDate(latestSub.created_at) %>
+              </div>
+
+              <!-- Image or PDF display -->
+              <div style="background: #F3F4F6; border: 1px solid #E5E7EB; border-radius: var(--radius-sm); overflow: hidden; max-height: 320px; display: flex; align-items: center; justify-content: center; position: relative;">
+                <% if (latestSub.mime_type === 'application/pdf') { %>
+                  <div style="padding: 30px; text-align: center;">
+                    <div style="font-size: 40px;">📄</div>
+                    <div style="font-weight: 700; margin: 8px 0;">Dokumen Bukti PDF</div>
+                    <a href="/order/<%= order.access_token %>/proof/<%= latestSub.id %>" target="_blank" class="btn btn-primary btn-sm">
+                      Buka Dokumen PDF &rsaquo;
+                    </a>
+                  </div>
+                <% } else { %>
+                  <a href="/order/<%= order.access_token %>/proof/<%= latestSub.id %>" target="_blank" title="Klik untuk memperbesar">
+                    <img src="/order/<%= order.access_token %>/proof/<%= latestSub.id %>" alt="Bukti Transfer" style="max-height: 300px; width: auto; object-fit: contain;">
+                  </a>
+                <% } %>
+              </div>
+              <div style="text-align: right; margin-top: 6px;">
+                <a href="/order/<%= order.access_token %>/proof/<%= latestSub.id %>" target="_blank" style="font-size: 12px; color: var(--primary); font-weight: 700;">
+                  🔍 Lihat Ukuran Penuh di Tab Baru
+                </a>
+              </div>
+            </div>
+
+            <!-- Verification Action Buttons -->
+            <% if (order.payment_status !== 'PAID') { %>
+              <div style="display: flex; flex-direction: column; gap: 12px; border-top: 1px solid var(--border-color); padding-top: 16px;">
+                
+                <!-- Accept Payment Form -->
+                <form action="/admin/orders/<%= order.id %>/verify-payment" method="POST">
+                  <input type="hidden" name="action" value="accept">
+                  <div class="form-group" style="margin-bottom: 8px;">
+                    <label class="form-label" style="font-size: 12px;">Ref Transaksi / Rekening (Opsional):</label>
+                    <input type="text" name="reference" class="form-control" placeholder="Contoh: BCA-948271" style="font-size: 13px; padding: 8px 12px;">
+                  </div>
+                  <button type="submit" class="btn btn-block" style="background: #166534; color: #FFF; padding: 12px;" onclick="return confirm('Apakah Anda yakin dana sebesar <%= formatRupiah(order.total) %> telah masuk ke rekening?')">
+                    ✔ Terima & Verifikasi Pembayaran
+                  </button>
+                </form>
+
+                <!-- Reject Payment Form -->
+                <button type="button" class="btn btn-outline btn-block" style="border-color: #dc2626; color: #dc2626; padding: 10px;" onclick="document.getElementById('reject-modal').style.display='block'">
+                  ✖ Tolak Bukti Pembayaran
+                </button>
+              </div>
+            <% } else { %>
+              <div style="background: #dcfce7; padding: 14px; border-radius: var(--radius-sm); font-size: 13px; color: #166534; font-weight: 700;">
+                ✔ Pembayaran telah disetujui pada <%= formatDate(latestSub.reviewed_at) %>.
+                <% if (latestSub.review_reference) { %>
+                  <br><span style="font-weight: normal; font-size: 12px;">Ref: <%= latestSub.review_reference %></span>
+                <% } %>
+              </div>
+            <% } %>
+
+          <% } %>
+        </div>
+
+        <!-- Operational Status Transition Box -->
+        <div class="card">
+          <h2 style="font-size: 18px; margin-bottom: 14px; border-bottom: 1px solid var(--border-color); padding-bottom: 10px;">
+            Update Status Pesanan
+          </h2>
+
+          <form action="/admin/orders/<%= order.id %>/status" method="POST">
+            <div class="form-group">
+              <label class="form-label">Pilih Status Baru:</label>
+              <select name="order_status" class="form-control">
+                <option value="NEW" <%= order.order_status === 'NEW' ? 'selected' : '' %>>NEW (Pesanan Baru)</option>
+                <option value="WAITING_CONFIRMATION" <%= order.order_status === 'WAITING_CONFIRMATION' ? 'selected' : '' %>>WAITING_CONFIRMATION (Menunggu Verifikasi)</option>
+                <option value="PAID" <%= order.order_status === 'PAID' ? 'selected' : '' %>>PAID (Pembayaran Terverifikasi)</option>
+                <option value="PREPARING" <%= order.order_status === 'PREPARING' ? 'selected' : '' %>>PREPARING (Sedang Dimasak / Diproses)</option>
+                <option value="READY" <%= order.order_status === 'READY' ? 'selected' : '' %>>READY (Siap Diambil / Diantar)</option>
+                <option value="COMPLETED" <%= order.order_status === 'COMPLETED' ? 'selected' : '' %>>COMPLETED (Selesai)</option>
+                <option value="CANCELLED" <%= order.order_status === 'CANCELLED' ? 'selected' : '' %>>CANCELLED (Dibatalkan)</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" style="font-size: 12px;">Catatan Perubahan (Opsional):</label>
+              <input type="text" name="note" class="form-control" placeholder="Contoh: Pesanan diserahkan ke driver" style="font-size: 13px; padding: 8px 12px;">
+            </div>
+
+            <button type="submit" class="btn btn-primary btn-block" style="padding: 10px;">
+              Simpan Perubahan Status
+            </button>
+          </form>
+        </div>
+
+      </div>
+
+    </div>
+  </main>
+</div>
+
+<!-- Modal Reject Payment -->
+<div id="reject-modal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 9999; align-items: center; justify-content: center;">
+  <div style="background: var(--white); max-width: 440px; width: 90%; margin: 80px auto; border-radius: var(--radius-md); padding: 24px; box-shadow: 0 10px 30px rgba(0,0,0,0.3);">
+    <h3 style="font-size: 18px; color: var(--primary); margin-bottom: 12px;">Tolak Bukti Pembayaran</h3>
+    <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 16px;">
+      Harap cantumkan alasan penolakan secara jelas. Alasan ini akan ditampilkan ke pelanggan agar mereka dapat mengunggah bukti yang benar.
+    </p>
+
+    <form action="/admin/orders/<%= order.id %>/verify-payment" method="POST">
+      <input type="hidden" name="action" value="reject">
+      <div class="form-group">
+        <label class="form-label">Alasan Penolakan (Wajib) *</label>
+        <textarea name="reason" class="form-control" placeholder="Contoh: Nominal transfer kurang Rp5.000 / Struk tidak terbaca / Mutasi belum masuk" required></textarea>
+      </div>
+
+      <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px;">
+        <button type="button" class="btn btn-outline btn-sm" onclick="document.getElementById('reject-modal').style.display='none'">
+          Batal
+        </button>
+        <button type="submit" class="btn btn-sm" style="background: #dc2626; color: #FFF;">
+          Tolak Pembayaran
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<style>
+@media (min-width: 900px) {
+  .detail-grid {
+    grid-template-columns: 1.3fr 0.7fr !important;
+  }
+}
+</style>
+
+</body>
+</html>

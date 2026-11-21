@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title><%= title %></title>
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="icon" type="image/jpeg" href="/images/logo.jpg">
+</head>
+<body>
+
+<div class="admin-layout">
+  <%- include('sidebar') %>
+
+  <main class="admin-main">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; flex-wrap: wrap; gap: 16px;">
+      <div>
+        <h1 style="font-size: 26px; color: var(--text-dark);">Kelola Paket Bundling</h1>
+        <p style="color: var(--text-muted); font-size: 14px;">Atur paket combo hemat, harga, diskon, dan item produk penyusunnya.</p>
+      </div>
+
+      <button type="button" class="btn btn-primary btn-sm" onclick="document.getElementById('add-bundle-modal').style.display='block'">
+        + Buat Paket Bundling Baru
+      </button>
+    </div>
+
+    <!-- Flash message -->
+    <% if (typeof req !== 'undefined' && req.query) { %>
+      <% if (req.query.msg === 'updated') { %>
+        <div style="background: #dcfce7; border: 1px solid #86efac; color: #166534; padding: 12px 16px; border-radius: var(--radius-sm); margin-bottom: 20px; font-weight: 700;">
+          ✔ Paket bundling berhasil diperbarui dan disinkronkan!
+        </div>
+      <% } else if (req.query.msg === 'created') { %>
+        <div style="background: #dcfce7; border: 1px solid #86efac; color: #166534; padding: 12px 16px; border-radius: var(--radius-sm); margin-bottom: 20px; font-weight: 700;">
+          ✔ Paket bundling baru berhasil dibuat!
+        </div>
+      <% } %>
+    <% } %>
+
+    <!-- Bundles Table -->
+    <div class="card" style="padding: 20px;">
+      <div class="table-responsive">
+        <table class="custom-table">
+          <thead>
+            <tr>
+              <th>Foto</th>
+              <th>Nama Paket</th>
+              <th>Komponen Produk</th>
+              <th>Harga Jual</th>
+              <th>Harga Coret</th>
+              <th>Status</th>
+              <th>Aksi</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% for (const b of bundles) { %>
+              <tr>
+                <td>
+                  <img src="<%= b.image %>" alt="<%= b.name %>" style="width: 52px; height: 52px; border-radius: 6px; object-fit: cover;">
+                </td>
+                <td>
+                  <strong><%= b.name %></strong>
+                  <div style="font-size: 12px; color: var(--text-muted);"><%= b.description %></div>
+                </td>
+                <td>
+                  <% if (b.items && b.items.length > 0) { %>
+                    <ul style="list-style: none; font-size: 12px;">
+                      <% for (const item of b.items) { %>
+                        <li>• <strong><%= item.quantity %>×</strong> <%= item.name %></li>
+                      <% } %>
+                    </ul>
+                  <% } else { %>
+                    <span style="color: var(--text-muted); font-size: 12px;">Tidak ada item</span>
+                  <% } %>
+                </td>
+                <td><strong><%= formatRupiah(b.price) %></strong></td>
+                <td>
+                  <% if (b.compare_price) { %>
+                    <span style="text-decoration: line-through; color: var(--text-muted); font-size: 13px;">
+                      <%= formatRupiah(b.compare_price) %>
+                    </span>
+                  <% } else { %>
+                    <span style="color: var(--text-muted); font-size: 12px;">-</span>
+                  <% } %>
+                </td>
+                <td>
+                  <span class="badge <%= b.available ? 'badge-green' : 'badge-red' %>">
+                    <%= b.available ? 'Aktif' : 'Nonaktif' %>
+                  </span>
+                </td>
+                <td>
+                  <div style="display: flex; gap: 6px; align-items: center;">
+                    <!-- Edit Button -->
+                    <button type="button" class="btn btn-outline btn-sm" style="padding: 4px 10px; font-size: 12px; border-color: #2563eb; color: #2563eb;" 
+                      onclick='openEditBundleModal(<%= JSON.stringify(b) %>)'>
+                      ✏️ Edit
+                    </button>
+                    <!-- Toggle Availability -->
+                    <form action="/admin/bundles/<%= b.id %>/toggle" method="POST" style="display: inline;">
+                      <button type="submit" class="btn btn-outline btn-sm" style="padding: 4px 10px; font-size: 12px;">
+                        <%= b.available ? 'Nonaktifkan' : 'Aktifkan' %>
+                      </button>
+                    </form>
+                  </div>
+                </td>
+              </tr>
+            <% } %>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- Modal Add Bundle -->
+<div id="add-bundle-modal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 9999; overflow-y: auto; padding: 40px 10px;">
+  <div style="background: var(--white); max-width: 550px; margin: 0 auto; border-radius: var(--radius-md); padding: 28px; box-shadow: 0 10px 30px rgba(0,0,0,0.3);">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+      <h3 style="font-size: 20px; color: var(--primary);">Buat Paket Bundling Baru</h3>
+      <button type="button" onclick="document.getElementById('add-bundle-modal').style.display='none'" style="border: none; background: none; font-size: 20px; cursor: pointer;">&times;</button>
+    </div>
+
+    <form action="/admin/bundles/new" method="POST" enctype="multipart/form-data">
+      <div class="form-group">
+        <label class="form-label">Nama Paket Bundling *</label>
+        <input type="text" name="name" class="form-control" placeholder="Contoh: Party Box Combo" required>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Deskripsi Paket</label>
+        <textarea name="description" class="form-control" placeholder="Isi paket dan keuntungan..."></textarea>
+      </div>
+
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+        <div class="form-group">
+          <label class="form-label">Harga Paket (Rp) *</label>
+          <input type="number" name="price" class="form-control" placeholder="Contoh: 65000" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Harga Normal / Coret (Rp)</label>
+          <input type="number" name="compare_price" class="form-control" placeholder="Contoh: 75000">
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Komponen Produk Paket:</label>
+        <div id="bundle-items-container" style="display: flex; flex-direction: column; gap: 8px;">
+          <div style="display: flex; gap: 8px;">
+            <select name="product_ids[]" class="form-control" style="flex: 2;">
+              <% for (const p of products) { %>
+                <option value="<%= p.id %>"><%= p.name %> (<%= formatRupiah(p.price) %>)</option>
+              <% } %>
+            </select>
+            <input type="number" name="quantities[]" class="form-control" value="1" min="1" max="10" placeholder="Qty" style="flex: 1;">
+          </div>
+        </div>
+        <button type="button" class="btn btn-outline btn-sm" style="margin-top: 8px;" onclick="addBundleItemRow('bundle-items-container')">
+          + Tambah Item Lain
+        </button>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Foto Paket (Opsional)</label>
+        <input type="file" name="bundle_image" class="form-control" accept="image/*">
+      </div>
+
+      <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 24px;">
+        <button type="button" class="btn btn-outline btn-sm" onclick="document.getElementById('add-bundle-modal').style.display='none'">
+          Batal
+        </button>
+        <button type="submit" class="btn btn-primary btn-sm">
+          Simpan Paket
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Modal Edit Bundle -->
+<div id="edit-bundle-modal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 9999; overflow-y: auto; padding: 40px 10px;">
+  <div style="background: var(--white); max-width: 550px; margin: 0 auto; border-radius: var(--radius-md); padding: 28px; box-shadow: 0 10px 30px rgba(0,0,0,0.3);">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+      <h3 style="font-size: 20px; color: var(--primary);">Edit Paket Bundling</h3>
+      <button type="button" onclick="document.getElementById('edit-bundle-modal').style.display='none'" style="border: none; background: none; font-size: 20px; cursor: pointer;">&times;</button>
+    </div>
+
+    <form id="edit-bundle-form" action="" method="POST" enctype="multipart/form-data">
+      <div class="form-group">
+        <label class="form-label">Nama Paket Bundling *</label>
+        <input type="text" name="name" id="edit-bundle-name" class="form-control" required>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Deskripsi Paket</label>
+        <textarea name="description" id="edit-bundle-desc" class="form-control"></textarea>
+      </div>
+
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+        <div class="form-group">
+          <label class="form-label">Harga Paket (Rp) *</label>
+          <input type="number" name="price" id="edit-bundle-price" class="form-control" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Harga Normal / Coret (Rp)</label>
+          <input type="number" name="compare_price" id="edit-bundle-compare" class="form-control">
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Status Ketersediaan</label>
+        <select name="available" id="edit-bundle-available" class="form-control">
+          <option value="1">Aktif (Tersedia)</option>
+          <option value="0">Nonaktif</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Komponen Produk Paket:</label>
+        <div id="edit-bundle-items-container" style="display: flex; flex-direction: column; gap: 8px;">
+          <!-- Populated by JS -->
+        </div>
+        <button type="button" class="btn btn-outline btn-sm" style="margin-top: 8px;" onclick="addBundleItemRow('edit-bundle-items-container')">
+          + Tambah Item Lain
+        </button>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Ganti Foto Paket (Biarkan kosong jika tidak diubah)</label>
+        <input type="file" name="bundle_image" class="form-control" accept="image/*">
+        <div style="margin-top: 8px; display: flex; align-items: center; gap: 8px;">
+          <span style="font-size: 12px; color: var(--text-muted);">Foto saat ini:</span>
+          <img id="edit-bundle-preview" src="" style="width: 40px; height: 40px; border-radius: 4px; object-fit: cover;">
+        </div>
+      </div>
+
+      <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 24px;">
+        <button type="button" class="btn btn-outline btn-sm" onclick="document.getElementById('edit-bundle-modal').style.display='none'">
+          Batal
+        </button>
+        <button type="submit" class="btn btn-primary btn-sm">
+          Simpan Perubahan
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Product options template for JS -->
+<div id="product-options-tpl" style="display: none;">
+  <% for (const p of products) { %>
+    <option value="<%= p.id %>"><%= p.name %> (<%= formatRupiah(p.price) %>)</option>
+  <% } %>
+</div>
+
+<script>
+function addBundleItemRow(containerId, selectedPid = null, qty = 1) {
+  const container = document.getElementById(containerId);
+  const div = document.createElement('div');
+  div.style.display = 'flex';
+  div.style.gap = '8px';
+
+  const select = document.createElement('select');
+  select.name = 'product_ids[]';
+  select.className = 'form-control';
+  select.style.flex = '2';
+  select.innerHTML = document.getElementById('product-options-tpl').innerHTML;
+  if (selectedPid) select.value = selectedPid;
+
+  const input = document.createElement('input');
+  input.type = 'number';
+  input.name = 'quantities[]';
+  input.className = 'form-control';
+  input.value = qty;
+  input.min = '1';
+  input.max = '10';
+  input.style.flex = '1';
+
+  const delBtn = document.createElement('button');
+  delBtn.type = 'button';
+  delBtn.innerHTML = '&times;';
+  delBtn.style.cssText = 'border: none; background: #fee2e2; color: #dc2626; border-radius: 6px; padding: 0 10px; cursor: pointer; font-size: 16px; font-weight: bold;';
+  delBtn.onclick = () => { div.remove(); };
+
+  div.appendChild(select);
+  div.appendChild(input);
+  div.appendChild(delBtn);
+  container.appendChild(div);
+}
+
+function openEditBundleModal(b) {
+  const form = document.getElementById('edit-bundle-form');
+  form.action = '/admin/bundles/' + b.id + '/edit';
+
+  document.getElementById('edit-bundle-name').value = b.name || '';
+  document.getElementById('edit-bundle-desc').value = b.description || '';
+  document.getElementById('edit-bundle-price').value = b.price || 0;
+  document.getElementById('edit-bundle-compare').value = b.compare_price || '';
+  document.getElementById('edit-bundle-available').value = b.available ? '1' : '0';
+  document.getElementById('edit-bundle-preview').src = b.image || '';
+
+  const container = document.getElementById('edit-bundle-items-container');
+  container.innerHTML = '';
+
+  if (b.items && b.items.length > 0) {
+    b.items.forEach(it => {
+      // Find product id if present or match by name
+      let pid = it.product_id;
+      if (!pid) {
+        const match = Array.from(document.querySelectorAll('#product-options-tpl option')).find(opt => opt.text.startsWith(it.name));
+        if (match) pid = match.value;
+      }
+      addBundleItemRow('edit-bundle-items-container', pid, it.quantity);
+    });
+  } else {
+    addBundleItemRow('edit-bundle-items-container');
+  }
+
+  document.getElementById('edit-bundle-modal').style.display = 'block';
+}
+</script>
+
+</body>
+</html>

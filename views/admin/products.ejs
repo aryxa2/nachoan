@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title><%= title %></title>
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="icon" type="image/jpeg" href="/images/logo.jpg">
+</head>
+<body>
+
+<div class="admin-layout">
+  <%- include('sidebar') %>
+
+  <main class="admin-main">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; flex-wrap: wrap; gap: 16px;">
+      <div>
+        <h1 style="font-size: 26px; color: var(--text-dark);">Kelola Menu Produk</h1>
+        <p style="color: var(--text-muted); font-size: 14px;">Atur ketersediaan menu, harga, foto, dan varian level pedas.</p>
+      </div>
+
+      <div style="display: flex; gap: 10px;">
+        <button type="button" class="btn btn-primary btn-sm" onclick="document.getElementById('add-product-modal').style.display='block'">
+          + Tambah Menu Baru
+        </button>
+      </div>
+    </div>
+
+    <!-- Flash message -->
+    <% if (typeof req !== 'undefined' && req.query) { %>
+      <% if (req.query.msg === 'updated') { %>
+        <div style="background: #dcfce7; border: 1px solid #86efac; color: #166534; padding: 12px 16px; border-radius: var(--radius-sm); margin-bottom: 20px; font-weight: 700;">
+          ✔ Menu produk berhasil diperbarui dan disinkronkan!
+        </div>
+      <% } else if (req.query.msg === 'created') { %>
+        <div style="background: #dcfce7; border: 1px solid #86efac; color: #166534; padding: 12px 16px; border-radius: var(--radius-sm); margin-bottom: 20px; font-weight: 700;">
+          ✔ Menu baru berhasil ditambahkan!
+        </div>
+      <% } else if (req.query.msg === 'deleted') { %>
+        <div style="background: #fee2e2; border: 1px solid #fca5a5; color: #991b1b; padding: 12px 16px; border-radius: var(--radius-sm); margin-bottom: 20px; font-weight: 700;">
+          ✔ Menu berhasil dihapus.
+        </div>
+      <% } %>
+    <% } %>
+
+    <!-- Products Table -->
+    <div class="card" style="padding: 20px;">
+      <div class="table-responsive">
+        <table class="custom-table">
+          <thead>
+            <tr>
+              <th>Foto</th>
+              <th>Nama Menu</th>
+              <th>Kategori</th>
+              <th>Harga</th>
+              <th>Varian Pedas</th>
+              <th>Status Stok</th>
+              <th>Aksi</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% for (const p of products) { %>
+              <tr>
+                <td>
+                  <img src="<%= p.image %>" alt="<%= p.name %>" style="width: 48px; height: 48px; border-radius: 6px; object-fit: cover;">
+                </td>
+                <td>
+                  <strong><%= p.name %></strong>
+                  <div style="font-size: 12px; color: var(--text-muted);"><%= p.description %></div>
+                </td>
+                <td>
+                  <span class="badge badge-orange"><%= p.category_name || 'Umum' %></span>
+                </td>
+                <td><strong><%= formatRupiah(p.price) %></strong></td>
+                <td>
+                  <% if (p.spicy_levels) { %>
+                    <span style="font-size: 12px; color: var(--primary);">
+                      <%= JSON.parse(p.spicy_levels).join(', ') %>
+                    </span>
+                  <% } else { %>
+                    <span style="color: var(--text-muted); font-size: 12px;">-</span>
+                  <% } %>
+                </td>
+                <td>
+                  <span class="badge <%= p.available ? 'badge-green' : 'badge-red' %>">
+                    <%= p.available ? 'Tersedia' : 'Habis' %>
+                  </span>
+                </td>
+                <td>
+                  <div style="display: flex; gap: 6px; align-items: center;">
+                    <!-- Edit Button -->
+                    <button type="button" class="btn btn-outline btn-sm" style="padding: 4px 10px; font-size: 12px; border-color: #2563eb; color: #2563eb;" 
+                      onclick='openEditProductModal(<%= JSON.stringify(p) %>)'>
+                      ✏️ Edit
+                    </button>
+                    <!-- Toggle Stock -->
+                    <form action="/admin/products/<%= p.id %>/toggle" method="POST" style="display: inline;">
+                      <button type="submit" class="btn btn-outline btn-sm" style="padding: 4px 10px; font-size: 12px;">
+                        <%= p.available ? 'Set Habis' : 'Set Ada' %>
+                      </button>
+                    </form>
+                    <!-- Delete -->
+                    <form action="/admin/products/<%= p.id %>/delete" method="POST" style="display: inline;" onsubmit="return confirm('Hapus menu ini?')">
+                      <button type="submit" class="btn btn-sm" style="background: #fee2e2; color: #dc2626; padding: 4px 10px; font-size: 12px; border: none; cursor: pointer; border-radius: var(--radius-full);">
+                        Hapus
+                      </button>
+                    </form>
+                  </div>
+                </td>
+              </tr>
+            <% } %>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- Modal Add Product -->
+<div id="add-product-modal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 9999; overflow-y: auto; padding: 40px 10px;">
+  <div style="background: var(--white); max-width: 500px; margin: 0 auto; border-radius: var(--radius-md); padding: 28px; box-shadow: 0 10px 30px rgba(0,0,0,0.3);">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+      <h3 style="font-size: 20px; color: var(--primary);">Tambah Menu Baru</h3>
+      <button type="button" onclick="document.getElementById('add-product-modal').style.display='none'" style="border: none; background: none; font-size: 20px; cursor: pointer;">&times;</button>
+    </div>
+
+    <form action="/admin/products/new" method="POST" enctype="multipart/form-data">
+      <div class="form-group">
+        <label class="form-label">Nama Menu *</label>
+        <input type="text" name="name" class="form-control" placeholder="Contoh: Truffle Cheese Nachos" required>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Kategori *</label>
+        <select name="category_id" class="form-control" required>
+          <% for (const c of categories) { %>
+            <option value="<%= c.id %>"><%= c.name %></option>
+          <% } %>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Harga (Rp) *</label>
+        <input type="number" name="price" class="form-control" placeholder="Contoh: 28000" required>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Deskripsi Menu</label>
+        <textarea name="description" class="form-control" placeholder="Nachos dengan saus keju spesial..."></textarea>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Pilihan Level Pedas (Pisahkan dengan koma jika ada)</label>
+        <input type="text" name="spicy_levels" class="form-control" placeholder="Original, Pedas, Extra Pedas">
+        <small style="color: var(--text-muted); font-size: 11px;">Kosongkan jika menu tidak memiliki pilihan level pedas (seperti minuman/saus).</small>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Foto Produk (JPG/PNG)</label>
+        <input type="file" name="image_file" class="form-control" accept="image/*">
+      </div>
+
+      <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 24px;">
+        <button type="button" class="btn btn-outline btn-sm" onclick="document.getElementById('add-product-modal').style.display='none'">
+          Batal
+        </button>
+        <button type="submit" class="btn btn-primary btn-sm">
+          Simpan Menu
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Modal Edit Product -->
+<div id="edit-product-modal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 9999; overflow-y: auto; padding: 40px 10px;">
+  <div style="background: var(--white); max-width: 500px; margin: 0 auto; border-radius: var(--radius-md); padding: 28px; box-shadow: 0 10px 30px rgba(0,0,0,0.3);">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+      <h3 style="font-size: 20px; color: var(--primary);">Edit Menu Produk</h3>
+      <button type="button" onclick="document.getElementById('edit-product-modal').style.display='none'" style="border: none; background: none; font-size: 20px; cursor: pointer;">&times;</button>
+    </div>
+
+    <form id="edit-product-form" action="" method="POST" enctype="multipart/form-data">
+      <input type="hidden" name="current_image" id="edit-prod-current-image">
+
+      <div class="form-group">
+        <label class="form-label">Nama Menu *</label>
+        <input type="text" name="name" id="edit-prod-name" class="form-control" required>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Kategori *</label>
+        <select name="category_id" id="edit-prod-category" class="form-control" required>
+          <% for (const c of categories) { %>
+            <option value="<%= c.id %>"><%= c.name %></option>
+          <% } %>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Harga (Rp) *</label>
+        <input type="number" name="price" id="edit-prod-price" class="form-control" required>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Deskripsi Menu</label>
+        <textarea name="description" id="edit-prod-desc" class="form-control"></textarea>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Pilihan Level Pedas (Pisahkan dengan koma)</label>
+        <input type="text" name="spicy_levels" id="edit-prod-spicy" class="form-control" placeholder="Original, Pedas, Extra Pedas">
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Status Ketersediaan</label>
+        <select name="available" id="edit-prod-available" class="form-control">
+          <option value="1">Tersedia (Ready)</option>
+          <option value="0">Habis (Out of stock)</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Ganti Foto Produk (Biarkan kosong jika tidak diubah)</label>
+        <input type="file" name="image_file" class="form-control" accept="image/*">
+        <div style="margin-top: 8px; display: flex; align-items: center; gap: 8px;">
+          <span style="font-size: 12px; color: var(--text-muted);">Foto saat ini:</span>
+          <img id="edit-prod-preview" src="" style="width: 36px; height: 36px; border-radius: 4px; object-fit: cover;">
+        </div>
+      </div>
+
+      <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 24px;">
+        <button type="button" class="btn btn-outline btn-sm" onclick="document.getElementById('edit-product-modal').style.display='none'">
+          Batal
+        </button>
+        <button type="submit" class="btn btn-primary btn-sm">
+          Simpan Perubahan
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+function openEditProductModal(p) {
+  const form = document.getElementById('edit-product-form');
+  form.action = '/admin/products/' + p.id + '/edit';
+
+  document.getElementById('edit-prod-name').value = p.name || '';
+  document.getElementById('edit-prod-category').value = p.category_id || 1;
+  document.getElementById('edit-prod-price').value = p.price || 0;
+  document.getElementById('edit-prod-desc').value = p.description || '';
+  document.getElementById('edit-prod-available').value = p.available ? '1' : '0';
+  document.getElementById('edit-prod-current-image').value = p.image || '';
+  document.getElementById('edit-prod-preview').src = p.image || '';
+
+  if (p.spicy_levels) {
+    try {
+      const arr = JSON.parse(p.spicy_levels);
+      document.getElementById('edit-prod-spicy').value = Array.isArray(arr) ? arr.join(', ') : '';
+    } catch(e) {
+      document.getElementById('edit-prod-spicy').value = p.spicy_levels;
+    }
+  } else {
+    document.getElementById('edit-prod-spicy').value = '';
+  }
+
+  document.getElementById('edit-product-modal').style.display = 'block';
+}
+</script>
+
+</body>
+</html>

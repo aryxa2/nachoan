@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title><%= title %></title>
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="icon" type="image/jpeg" href="/images/logo.jpg">
+</head>
+<body>
+
+<div class="admin-layout">
+  <%- include('sidebar') %>
+
+  <main class="admin-main">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 28px; flex-wrap: wrap; gap: 16px;">
+      <div>
+        <h1 style="font-size: 26px; color: var(--text-dark);">Dashboard Toko</h1>
+        <p style="color: var(--text-muted); font-size: 14px;">Ringkasan operasional dan keuangan NACHOAN hari ini.</p>
+      </div>
+      <div>
+        <a href="/admin/orders?status=WAITING_CONFIRMATION" class="btn btn-primary btn-sm">
+          🔔 Periksa <%= pendingVerification %> Pembayaran Menunggu
+        </a>
+      </div>
+    </div>
+
+    <!-- Stat Cards -->
+    <div class="stat-grid">
+      <div class="stat-card" style="border-left: 4px solid var(--accent-green);">
+        <div class="stat-label">Pendapatan Terverifikasi</div>
+        <div class="stat-value" style="color: var(--accent-green);"><%= formatRupiah(verifiedRevenue) %></div>
+        <div style="font-size: 11px; color: var(--text-muted); margin-top: 4px;">*Hanya pesanan berstatus PAID</div>
+      </div>
+
+      <div class="stat-card" style="border-left: 4px solid var(--primary);">
+        <div class="stat-label">Menunggu Verifikasi</div>
+        <div class="stat-value" style="color: var(--primary);"><%= pendingVerification %></div>
+        <div style="font-size: 11px; color: var(--text-muted); margin-top: 4px;">Perlu pengecekan bukti transfer</div>
+      </div>
+
+      <div class="stat-card" style="border-left: 4px solid var(--secondary);">
+        <div class="stat-label">Total Pesanan</div>
+        <div class="stat-value"><%= totalOrders %></div>
+        <div style="font-size: 11px; color: var(--text-muted); margin-top: 4px;">Seluruh pesanan masuk</div>
+      </div>
+
+      <div class="stat-card" style="border-left: 4px solid var(--accent-orange);">
+        <div class="stat-label">Menu & Combo Aktif</div>
+        <div class="stat-value"><%= activeMenuItems %></div>
+        <div style="font-size: 11px; color: var(--text-muted); margin-top: 4px;">Tersedia untuk dipesan</div>
+      </div>
+    </div>
+
+    <!-- Recent Orders Table -->
+    <div class="card" style="padding: 24px;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <h2 style="font-size: 18px; color: var(--text-dark);">Pesanan Terbaru</h2>
+        <a href="/admin/orders" class="btn btn-outline btn-sm">Lihat Semua Pesanan &rsaquo;</a>
+      </div>
+
+      <% if (recentOrders && recentOrders.length > 0) { %>
+        <div class="table-responsive">
+          <table class="custom-table">
+            <thead>
+              <tr>
+                <th>No. Pesanan</th>
+                <th>Waktu</th>
+                <th>Pelanggan</th>
+                <th>Metode</th>
+                <th>Total</th>
+                <th>Status Pembayaran</th>
+                <th>Status Pesanan</th>
+                <th>Aksi</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% for (const order of recentOrders) { %>
+                <% const sInfo = getStatusInfo(order.order_status, order.payment_status); %>
+                <tr>
+                  <td><strong><%= order.order_number %></strong></td>
+                  <td style="font-size: 13px; color: var(--text-muted);"><%= formatDate(order.created_at) %></td>
+                  <td>
+                    <div><strong><%= order.customer_name %></strong></div>
+                    <div style="font-size: 12px; color: var(--text-muted);"><%= order.customer_phone %></div>
+                  </td>
+                  <td>
+                    <span class="badge <%= order.method === 'delivery' ? 'badge-yellow' : 'badge-orange' %>">
+                      <%= order.method === 'delivery' ? 'Delivery' : 'Pickup' %>
+                    </span>
+                  </td>
+                  <td><strong><%= formatRupiah(order.total) %></strong></td>
+                  <td>
+                    <span class="badge <%= order.payment_status === 'PAID' ? 'badge-green' : (order.payment_status === 'REJECTED' ? 'badge-red' : 'badge-yellow') %>">
+                      <%= order.payment_status %>
+                    </span>
+                  </td>
+                  <td>
+                    <span class="badge" style="background: <%= sInfo.bg %>; color: <%= sInfo.text %>;">
+                      <%= sInfo.label %>
+                    </span>
+                  </td>
+                  <td>
+                    <a href="/admin/orders/<%= order.id %>" class="btn btn-outline btn-sm">
+                      Detail
+                    </a>
+                  </td>
+                </tr>
+              <% } %>
+            </tbody>
+          </table>
+        </div>
+      <% } else { %>
+        <p style="text-align: center; color: var(--text-muted); padding: 32px 0;">Belum ada pesanan yang masuk.</p>
+      <% } %>
+    </div>
+  </main>
+</div>
+
+</body>
+</html>

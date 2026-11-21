@@ -1,0 +1,601 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title><%= title %></title>
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="icon" type="image/jpeg" href="/images/logo.jpg">
+  <style>
+    .bulk-bar {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: #1A1412;
+      color: #FFF;
+      padding: 12px 20px;
+      border-radius: var(--radius-sm);
+      margin-bottom: 20px;
+      display: none;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 12px;
+      box-shadow: 0 4px 14px rgba(0,0,0,0.25);
+    }
+    .modal-overlay {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.6);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+      padding: 16px;
+    }
+    .modal-content {
+      background: var(--white);
+      border-radius: var(--radius-md);
+      max-width: 540px;
+      width: 100%;
+      padding: 24px;
+      max-height: 90vh;
+      overflow-y: auto;
+    }
+  </style>
+</head>
+<body>
+
+<div class="admin-layout">
+  <%- include('sidebar') %>
+
+  <main class="admin-main">
+    <!-- Header Title & Tools -->
+    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px; flex-wrap: wrap; gap: 16px;">
+      <div>
+        <h1 style="font-size: 26px; color: var(--text-dark); margin-bottom: 4px;">Kelola Pesanan & Sinkronisasi</h1>
+        <p style="color: var(--text-muted); font-size: 14px;">
+          Sinkronisasi dua arah otomatis antara Website dan Google Spreadsheet secara real-time.
+        </p>
+      </div>
+
+      <!-- Sync & Action Buttons -->
+      <div style="display: flex; gap: 8px; flex-wrap: wrap; align-items: center;">
+        <button type="button" class="btn btn-outline btn-sm" onclick="syncFromSheets()" id="btn-sync-from" title="Tarik perubahan status atau data yang diedit langsung di Spreadsheet ke Website">
+          🔄 Tarik dari Spreadsheet
+        </button>
+        <button type="button" class="btn btn-outline btn-sm" onclick="syncToSheets()" id="btn-sync-to" title="Kirim seluruh data pesanan & menu website ke Spreadsheet">
+          ☁️ Kirim ke Spreadsheet
+        </button>
+        <button type="button" class="btn btn-primary btn-sm" onclick="openManualOrderModal()">
+          + Tambah Pesanan Manual
+        </button>
+        <button type="button" class="btn btn-outline btn-sm" style="color: #dc2626; border-color: #fca5a5;" onclick="confirmResetAll()" title="Reset pesanan dan format spreadsheet dari awal">
+          ⚠️ Reset dari Awal
+        </button>
+      </div>
+    </div>
+
+    <!-- Alert / Status Toast -->
+    <div id="sync-alert" style="display: none; padding: 12px 16px; border-radius: var(--radius-sm); margin-bottom: 16px; font-size: 14px; font-weight: 600;"></div>
+
+    <!-- Google Sheet Live Indicator -->
+    <div style="background: #FFF8F0; border: 1.5px solid var(--border-color); border-radius: var(--radius-sm); padding: 10px 16px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; font-size: 13px;">
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <span style="font-size: 18px;">📊</span>
+        <span><strong>Google Sheets Terhubung:</strong> <code>1YDenYpVKZVnhv5jBxp4iMdxxLMgHGOSTn3qjkBmEmJ8</code></span>
+        <span class="badge badge-green" style="font-size: 11px;">Aktif Dua Arah</span>
+      </div>
+      <div>
+        <a href="https://docs.google.com/spreadsheets/d/1YDenYpVKZVnhv5jBxp4iMdxxLMgHGOSTn3qjkBmEmJ8/edit" target="_blank" class="btn btn-outline btn-sm" style="padding: 4px 10px; font-size: 12px;">
+          Buka Google Spreadsheet &nearr;
+        </a>
+      </div>
+    </div>
+
+    <!-- Bulk Action Toolbar (Shown when rows selected) -->
+    <div id="bulk-bar" class="bulk-bar">
+      <div style="display: flex; align-items: center; gap: 12px;">
+        <span style="background: var(--primary); padding: 4px 10px; border-radius: 9999px; font-weight: 800; font-size: 13px;">
+          <span id="selected-count">0</span> terpilih
+        </span>
+        <span style="font-size: 13px; color: #BBB;">Aksi Bulk Pemesanan:</span>
+      </div>
+
+      <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+        <!-- Status Pesanan -->
+        <select id="bulk-order-status" class="form-control" style="width: auto; height: 34px; padding: 4px 10px; font-size: 13px;">
+          <option value="">-- Ubah Status Pesanan --</option>
+          <option value="NEW">NEW (Pesanan Baru)</option>
+          <option value="PREPARING">PREPARING (Sedang Dimasak)</option>
+          <option value="READY">READY (Siap Diambil/Diantar)</option>
+          <option value="COMPLETED">COMPLETED (Selesai)</option>
+          <option value="CANCELLED">CANCELLED (Dibatalkan)</option>
+        </select>
+
+        <!-- Status Pembayaran -->
+        <select id="bulk-payment-status" class="form-control" style="width: auto; height: 34px; padding: 4px 10px; font-size: 13px;">
+          <option value="">-- Ubah Status Bayar --</option>
+          <option value="PAID">PAID (Lunas / Terverifikasi)</option>
+          <option value="WAITING_CONFIRMATION">WAITING_CONFIRMATION (Menunggu Verifikasi)</option>
+          <option value="UNPAID">UNPAID (Belum Bayar)</option>
+          <option value="REJECTED">REJECTED (Tolak Bukti)</option>
+        </select>
+
+        <button type="button" class="btn btn-primary btn-sm" onclick="applyBulkUpdate()">
+          Terapkan Perubahan
+        </button>
+
+        <button type="button" class="btn btn-outline btn-sm" style="color: #f87171; border-color: #f87171;" onclick="applyBulkDelete()">
+          🗑️ Hapus
+        </button>
+
+        <button type="button" class="btn btn-outline btn-sm" style="color: #FFF; border-color: #666;" onclick="clearSelection()">
+          Batal
+        </button>
+      </div>
+    </div>
+
+    <!-- Search & Filter Controls -->
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 12px;">
+      <!-- Filter Tabs -->
+      <div style="display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px;">
+        <a href="/admin/orders?status=all<%= currentSearch ? '&search=' + currentSearch : '' %>" 
+           class="btn btn-sm <%= currentStatus === 'all' ? 'btn-primary' : 'btn-outline' %>">
+          Semua (<%= counts.all %>)
+        </a>
+        <a href="/admin/orders?status=WAITING_CONFIRMATION<%= currentSearch ? '&search=' + currentSearch : '' %>" 
+           class="btn btn-sm <%= currentStatus === 'WAITING_CONFIRMATION' ? 'btn-primary' : 'btn-outline' %>">
+          Menunggu Verifikasi (<%= counts.waiting %>)
+        </a>
+        <a href="/admin/orders?status=PAID<%= currentSearch ? '&search=' + currentSearch : '' %>" 
+           class="btn btn-sm <%= currentStatus === 'PAID' ? 'btn-primary' : 'btn-outline' %>">
+          Lunas (<%= counts.paid %>)
+        </a>
+        <a href="/admin/orders?status=UNPAID<%= currentSearch ? '&search=' + currentSearch : '' %>" 
+           class="btn btn-sm <%= currentStatus === 'UNPAID' ? 'btn-primary' : 'btn-outline' %>">
+          Belum Bayar (<%= counts.unpaid %>)
+        </a>
+      </div>
+
+      <!-- Search Box -->
+      <form action="/admin/orders" method="GET" style="display: flex; gap: 8px;">
+        <input type="hidden" name="status" value="<%= currentStatus %>">
+        <input type="text" name="search" class="form-control" placeholder="Cari No. Pesanan / Nama / WA..." value="<%= currentSearch %>" style="width: 240px; height: 34px;">
+        <button type="submit" class="btn btn-primary btn-sm">Cari</button>
+        <% if (currentSearch) { %>
+          <a href="/admin/orders?status=<%= currentStatus %>" class="btn btn-outline btn-sm">Reset</a>
+        <% } %>
+      </form>
+    </div>
+
+    <!-- Orders Table -->
+    <div class="card" style="padding: 20px;">
+      <% if (orders && orders.length > 0) { %>
+        <div class="table-responsive">
+          <table class="custom-table" id="orders-table">
+            <thead>
+              <tr>
+                <th style="width: 40px; text-align: center;">
+                  <input type="checkbox" id="check-all" onchange="toggleSelectAll(this)" title="Pilih Semua">
+                </th>
+                <th>No. Pesanan</th>
+                <th>Waktu</th>
+                <th>Pelanggan</th>
+                <th>Metode</th>
+                <th>Total</th>
+                <th>Status Pembayaran</th>
+                <th>Status Pesanan</th>
+                <th>Aksi</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% for (const order of orders) { %>
+                <% const sInfo = getStatusInfo(order.order_status, order.payment_status); %>
+                <tr id="row-<%= order.id %>">
+                  <td style="text-align: center;">
+                    <input type="checkbox" class="order-cb" value="<%= order.id %>" onchange="onCheckboxChange()">
+                  </td>
+                  <td><strong><%= order.order_number %></strong></td>
+                  <td style="font-size: 13px; color: var(--text-muted);"><%= formatDate(order.created_at) %></td>
+                  <td>
+                    <div><strong><%= order.customer_name %></strong></div>
+                    <div style="font-size: 12px; color: var(--text-muted);"><%= order.customer_phone %></div>
+                  </td>
+                  <td>
+                    <span class="badge <%= order.method === 'delivery' ? 'badge-yellow' : 'badge-orange' %>">
+                      <%= order.method === 'delivery' ? 'Delivery' : 'Pickup' %>
+                    </span>
+                  </td>
+                  <td><strong><%= formatRupiah(order.total) %></strong></td>
+                  <td>
+                    <span class="badge <%= order.payment_status === 'PAID' ? 'badge-green' : (order.payment_status === 'REJECTED' ? 'badge-red' : 'badge-yellow') %>">
+                      <%= order.payment_status %>
+                    </span>
+                  </td>
+                  <td>
+                    <span class="badge" style="background: <%= sInfo.bg %>; color: <%= sInfo.text %>;">
+                      <%= sInfo.label %>
+                    </span>
+                  </td>
+                  <td>
+                    <a href="/admin/orders/<%= order.id %>" class="btn btn-outline btn-sm">
+                      Kelola &rsaquo;
+                    </a>
+                  </td>
+                </tr>
+              <% } %>
+            </tbody>
+          </table>
+        </div>
+      <% } else { %>
+        <div style="text-align: center; padding: 48px 20px;">
+          <div style="font-size: 48px; margin-bottom: 12px;">📋✨</div>
+          <h3 style="font-size: 18px; color: var(--text-dark); margin-bottom: 6px;">Belum Ada Pesanan Masuk</h3>
+          <p style="color: var(--text-muted); font-size: 14px; margin-bottom: 16px;">
+            Pesanan baru dari website atau Google Sheets akan langsung muncul di sini.
+          </p>
+          <button type="button" class="btn btn-primary btn-sm" onclick="openManualOrderModal()">
+            + Buat Pesanan Manual Pertama
+          </button>
+        </div>
+      <% } %>
+    </div>
+  </main>
+</div>
+
+<!-- Modal Tambah Pesanan Manual -->
+<div id="manual-order-modal" class="modal-overlay">
+  <div class="modal-content">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; border-bottom: 1px solid var(--border-color); padding-bottom: 10px;">
+      <h2 style="font-size: 18px; color: var(--text-dark); margin: 0;">+ Tambah Pesanan Manual</h2>
+      <button type="button" onclick="closeManualOrderModal()" style="border: none; background: none; font-size: 22px; cursor: pointer;">&times;</button>
+    </div>
+
+    <form id="manual-order-form" onsubmit="submitManualOrder(event)">
+      <div class="form-group">
+        <label class="form-label">Nama Pemesan *</label>
+        <input type="text" id="man-name" class="form-control" placeholder="Contoh: Siti Aisyah" required>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Nomor WhatsApp / HP *</label>
+        <input type="tel" id="man-phone" class="form-control" placeholder="Contoh: 081234567890" required>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Metode Pengambilan</label>
+        <select id="man-method" class="form-control" onchange="toggleManualAddress()">
+          <option value="pickup">Ambil di Toko (Pickup - Rp0)</option>
+          <option value="delivery">Delivery (Diluar Telkom - Rp2.000)</option>
+        </select>
+      </div>
+
+      <div class="form-group" id="man-address-group" style="display: none;">
+        <label class="form-label">Alamat Pengantaran *</label>
+        <textarea id="man-address" class="form-control" rows="2" placeholder="Alamat lengkap tujuan..."></textarea>
+      </div>
+
+      <!-- Menu Selection -->
+      <div class="form-group">
+        <label class="form-label">Pilihan Menu Nachos:</label>
+        <div style="display: flex; flex-direction: column; gap: 8px;">
+          <% if (typeof activeProducts !== 'undefined' && activeProducts.length > 0) { %>
+            <% for (const p of activeProducts) { %>
+              <div style="display: flex; justify-content: space-between; align-items: center; background: #FFF8F0; padding: 10px 14px; border-radius: var(--radius-sm); border: 1px solid var(--border-color);">
+                <div>
+                  <div style="font-weight: 700; font-size: 14px;"><%= p.name %></div>
+                  <div style="font-size: 12px; color: var(--text-muted);"><%= formatRupiah(p.price) %></div>
+                </div>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                  <span style="font-size: 13px;">Qty:</span>
+                  <input type="number" class="form-control man-qty" data-id="<%= p.id %>" data-price="<%= p.price %>" min="0" value="0" style="width: 70px; text-align: center;">
+                </div>
+              </div>
+            <% } %>
+          <% } %>
+        </div>
+      </div>
+
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+        <div class="form-group">
+          <label class="form-label">Status Pembayaran</label>
+          <select id="man-payment-status" class="form-control">
+            <option value="PAID">Lunas (PAID)</option>
+            <option value="UNPAID">Belum Bayar (UNPAID)</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Status Pesanan</label>
+          <select id="man-order-status" class="form-control">
+            <option value="NEW">NEW (Pesanan Baru)</option>
+            <option value="PREPARING">PREPARING (Dimasak)</option>
+            <option value="READY">READY (Siap)</option>
+            <option value="COMPLETED">COMPLETED (Selesai)</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Catatan Pesanan (Opsional)</label>
+        <input type="text" id="man-notes" class="form-control" placeholder="Contoh: Saus dipisah">
+      </div>
+
+      <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 16px;">
+        <button type="button" class="btn btn-outline" onclick="closeManualOrderModal()">Batal</button>
+        <button type="submit" id="btn-save-manual" class="btn btn-primary">Simpan & Sync ke Sheets &rsaquo;</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+  function showToast(msg, isSuccess = true) {
+    const el = document.getElementById('sync-alert');
+    el.style.display = 'block';
+    el.style.background = isSuccess ? '#dcfce7' : '#fee2e2';
+    el.style.color = isSuccess ? '#166534' : '#991b1b';
+    el.style.border = `1px solid ${isSuccess ? '#86efac' : '#fca5a5'}`;
+    el.textContent = msg;
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    setTimeout(() => { el.style.display = 'none'; }, 6000);
+  }
+
+  // Two-way sync: Pull from Sheets
+  async function syncFromSheets() {
+    const btn = document.getElementById('btn-sync-from');
+    btn.disabled = true;
+    btn.textContent = '🔄 Menarik Data...';
+
+    try {
+      const res = await fetch('/admin/orders/sync-from-sheets', {
+        method: 'POST',
+        headers: { 'Accept': 'application/json' }
+      });
+      const data = await res.json();
+      if (data.success) {
+        showToast(data.message || 'Sinkronisasi dari Google Sheets berhasil!', true);
+        setTimeout(() => window.location.reload(), 1200);
+      } else {
+        showToast(data.message || 'Gagal menarik data dari Google Sheets.', false);
+        btn.disabled = false;
+        btn.textContent = '🔄 Tarik dari Spreadsheet';
+      }
+    } catch (err) {
+      showToast('Terjadi kesalahan jaringan saat sync.', false);
+      btn.disabled = false;
+      btn.textContent = '🔄 Tarik dari Spreadsheet';
+    }
+  }
+
+  // Two-way sync: Push to Sheets
+  async function syncToSheets() {
+    const btn = document.getElementById('btn-sync-to');
+    btn.disabled = true;
+    btn.textContent = '☁️ Mengirim...';
+
+    try {
+      const res = await fetch('/admin/orders/sync-to-sheets', {
+        method: 'POST',
+        headers: { 'Accept': 'application/json' }
+      });
+      const data = await res.json();
+      if (data.success) {
+        showToast(data.message || 'Data berhasil dikirim ke Google Sheets!', true);
+      } else {
+        showToast(data.message || 'Gagal mengirim ke Google Sheets.', false);
+      }
+    } catch (err) {
+      showToast('Terjadi kesalahan jaringan.', false);
+    } finally {
+      btn.disabled = false;
+      btn.textContent = '☁️ Kirim ke Spreadsheet';
+    }
+  }
+
+  // Reset all
+  async function confirmResetAll() {
+    const ok = confirm('PERHATIAN: Ini akan mereset data pesanan dari awal dan menyiapkan format kolom rapi baru di Google Spreadsheet. Lanjutkan?');
+    if (!ok) return;
+
+    try {
+      const res = await fetch('/admin/orders/reset-all', {
+        method: 'POST',
+        headers: { 'Accept': 'application/json' }
+      });
+      const data = await res.json();
+      if (data.success) {
+        alert(data.message);
+        window.location.reload();
+      } else {
+        alert('Gagal reset: ' + data.message);
+      }
+    } catch (err) {
+      alert('Kesalahan jaringan saat reset.');
+    }
+  }
+
+  // Checkbox & Bulk Actions
+  function getSelectedIds() {
+    const cbs = document.querySelectorAll('.order-cb:checked');
+    return Array.from(cbs).map(cb => cb.value);
+  }
+
+  function onCheckboxChange() {
+    const ids = getSelectedIds();
+    const count = ids.length;
+    const bar = document.getElementById('bulk-bar');
+    const countEl = document.getElementById('selected-count');
+
+    if (count > 0) {
+      bar.style.display = 'flex';
+      countEl.textContent = count;
+    } else {
+      bar.style.display = 'none';
+      const checkAll = document.getElementById('check-all');
+      if (checkAll) checkAll.checked = false;
+    }
+  }
+
+  function toggleSelectAll(masterCb) {
+    const cbs = document.querySelectorAll('.order-cb');
+    cbs.forEach(cb => cb.checked = masterCb.checked);
+    onCheckboxChange();
+  }
+
+  function clearSelection() {
+    const master = document.getElementById('check-all');
+    if (master) master.checked = false;
+    toggleSelectAll({ checked: false });
+  }
+
+  async function applyBulkUpdate() {
+    const ids = getSelectedIds();
+    if (ids.length === 0) return alert('Pilih minimal satu pesanan.');
+
+    const orderStatus = document.getElementById('bulk-order-status').value;
+    const paymentStatus = document.getElementById('bulk-payment-status').value;
+
+    if (!orderStatus && !paymentStatus) {
+      return alert('Pilih minimal satu perubahan status (Status Pesanan atau Status Pembayaran).');
+    }
+
+    try {
+      const res = await fetch('/admin/orders/bulk-update', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
+        body: JSON.stringify({
+          order_ids: ids,
+          order_status: orderStatus,
+          payment_status: paymentStatus
+        })
+      });
+      const data = await res.json();
+      if (data.success) {
+        showToast(data.message, true);
+        setTimeout(() => window.location.reload(), 800);
+      } else {
+        alert(data.message || 'Gagal memperbarui pesanan.');
+      }
+    } catch (err) {
+      alert('Terjadi kesalahan jaringan.');
+    }
+  }
+
+  async function applyBulkDelete() {
+    const ids = getSelectedIds();
+    if (ids.length === 0) return alert('Pilih minimal satu pesanan.');
+
+    const ok = confirm(`Hapus permanen ${ids.length} pesanan terpilih?`);
+    if (!ok) return;
+
+    try {
+      const res = await fetch('/admin/orders/bulk-delete', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
+        body: JSON.stringify({ order_ids: ids })
+      });
+      const data = await res.json();
+      if (data.success) {
+        showToast(data.message, true);
+        setTimeout(() => window.location.reload(), 800);
+      } else {
+        alert(data.message || 'Gagal menghapus pesanan.');
+      }
+    } catch (err) {
+      alert('Terjadi kesalahan jaringan.');
+    }
+  }
+
+  // Modal Manual Order
+  function openManualOrderModal() {
+    document.getElementById('manual-order-modal').style.display = 'flex';
+  }
+
+  function closeManualOrderModal() {
+    document.getElementById('manual-order-modal').style.display = 'none';
+  }
+
+  function toggleManualAddress() {
+    const method = document.getElementById('man-method').value;
+    const grp = document.getElementById('man-address-group');
+    grp.style.display = method === 'delivery' ? 'block' : 'none';
+  }
+
+  async function submitManualOrder(e) {
+    e.preventDefault();
+    const name = document.getElementById('man-name').value.trim();
+    const phone = document.getElementById('man-phone').value.trim();
+    const method = document.getElementById('man-method').value;
+    const address = method === 'delivery' ? document.getElementById('man-address').value.trim() : null;
+    const payment_status = document.getElementById('man-payment-status').value;
+    const order_status = document.getElementById('man-order-status').value;
+    const notes = document.getElementById('man-notes').value.trim();
+
+    if (method === 'delivery' && !address) {
+      return alert('Alamat wajib diisi untuk delivery.');
+    }
+
+    const items = [];
+    document.querySelectorAll('.man-qty').forEach(inp => {
+      const q = parseInt(inp.value, 10);
+      if (q > 0) {
+        items.push({
+          product_id: parseInt(inp.getAttribute('data-id'), 10),
+          quantity: q
+        });
+      }
+    });
+
+    if (items.length === 0) {
+      return alert('Pilih minimal 1 item menu.');
+    }
+
+    const btn = document.getElementById('btn-save-manual');
+    btn.disabled = true;
+    btn.textContent = 'Menyimpan...';
+
+    try {
+      const res = await fetch('/admin/orders/create-manual', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
+        body: JSON.stringify({
+          customer_name: name,
+          customer_phone: phone,
+          method,
+          address,
+          payment_status,
+          order_status,
+          notes,
+          items
+        })
+      });
+      const data = await res.json();
+      if (data.success) {
+        alert(data.message);
+        window.location.reload();
+      } else {
+        alert(data.message || 'Gagal membuat pesanan manual.');
+        btn.disabled = false;
+        btn.textContent = 'Simpan & Sync ke Sheets ›';
+      }
+    } catch (err) {
+      alert('Terjadi kesalahan koneksi.');
+      btn.disabled = false;
+      btn.textContent = 'Simpan & Sync ke Sheets ›';
+    }
+  }
+</script>
+
+</body>
+</html>

@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title><%= title %></title>
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="icon" type="image/jpeg" href="/images/logo.jpg">
+</head>
+<body>
+
+<div class="admin-layout">
+  <%- include('sidebar') %>
+
+  <main class="admin-main">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; flex-wrap: wrap; gap: 16px;">
+      <div>
+        <h1 style="font-size: 26px; color: var(--text-dark);">Kelola Hero Carousel</h1>
+        <p style="color: var(--text-muted); font-size: 14px;">Atur gambar banner hero beranda, upload foto produk baru, dan tentukan jumlah slide aktif.</p>
+      </div>
+
+      <div style="display: flex; gap: 10px;">
+        <button type="button" class="btn btn-primary btn-sm" onclick="openAddModal()">
+          + Tambah Slide Baru
+        </button>
+      </div>
+    </div>
+
+    <!-- Feedback Alerts -->
+    <% if (typeof msg !== 'undefined' && msg) { %>
+      <div style="background: #dcfce7; border: 1px solid #86efac; color: #166534; padding: 12px 16px; border-radius: var(--radius-sm); margin-bottom: 20px; font-weight: 600;">
+        <% if (msg === 'added') { %>✔ Slide carousel baru berhasil ditambahkan!<% } %>
+        <% if (msg === 'updated') { %>✔ Slide carousel berhasil diperbarui!<% } %>
+        <% if (msg === 'toggled') { %>✔ Status tayang slide berhasil diubah!<% } %>
+        <% if (msg === 'deleted') { %>✔ Slide carousel berhasil dihapus!<% } %>
+      </div>
+    <% } %>
+
+    <% if (typeof error !== 'undefined' && error) { %>
+      <div style="background: #fee2e2; border: 1px solid #fca5a5; color: #991b1b; padding: 12px 16px; border-radius: var(--radius-sm); margin-bottom: 20px; font-weight: 600;">
+        ⚠️ <%= error %>
+      </div>
+    <% } %>
+
+    <!-- Summary Stats Bar -->
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 24px;">
+      <div class="card" style="padding: 16px; border-left: 4px solid var(--primary);">
+        <div style="font-size: 13px; color: var(--text-muted);">Total Slide Terdaftar</div>
+        <div style="font-size: 24px; font-weight: 800; color: var(--text-dark); margin-top: 4px;"><%= slides.length %> Slide</div>
+      </div>
+      <div class="card" style="padding: 16px; border-left: 4px solid var(--accent-green);">
+        <div style="font-size: 13px; color: var(--text-muted);">Slide Aktif di Beranda</div>
+        <div style="font-size: 24px; font-weight: 800; color: var(--accent-green); margin-top: 4px;"><%= activeCount %> Slide</div>
+      </div>
+      <div class="card" style="padding: 16px; border-left: 4px solid var(--secondary);">
+        <div style="font-size: 13px; color: var(--text-muted);">Status Carousel Beranda</div>
+        <div style="font-size: 16px; font-weight: 700; color: var(--secondary); margin-top: 8px;">
+          <% if (activeCount > 1) { %>
+            🔄 Rotasi Otomatis (4.5 detik)
+          <% } else if (activeCount === 1) { %>
+            🖼️ Gambar Tunggal Statis
+          <% } else { %>
+            ⚠️ Fallback Default
+          <% } %>
+        </div>
+      </div>
+    </div>
+
+    <!-- Carousel Slides List -->
+    <div class="card" style="padding: 24px;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px;">
+        <h2 style="font-size: 18px; color: var(--text-dark);">Daftar Foto & Slide Carousel</h2>
+        <span style="font-size: 13px; color: var(--text-muted);">Urutan berdasarkan nilai sort terkecil (1, 2, 3...)</span>
+      </div>
+
+      <% if (slides && slides.length > 0) { %>
+        <div class="table-responsive">
+          <table class="custom-table">
+            <thead>
+              <tr>
+                <th style="width: 70px;">Urutan</th>
+                <th style="width: 120px;">Foto</th>
+                <th>Judul & Keterangan</th>
+                <th>URL Gambar</th>
+                <th>Status Tayang</th>
+                <th style="text-align: right; width: 220px;">Aksi</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% for (const slide of slides) { %>
+                <tr>
+                  <td style="text-align: center; font-weight: 700; font-size: 15px;">
+                    <%= slide.sort_order %>
+                  </td>
+                  <td>
+                    <div style="width: 90px; height: 90px; border-radius: 12px; overflow: hidden; border: 1px solid var(--border-color); background: #f8fafc; display: flex; align-items: center; justify-content: center;">
+                      <img src="<%= slide.image_url %>" alt="<%= slide.title %>" style="max-width: 100%; max-height: 100%; object-fit: contain;">
+                    </div>
+                  </td>
+                  <td>
+                    <div style="font-weight: 700; font-size: 15px; color: var(--text-dark); margin-bottom: 4px;">
+                      <%= slide.title || '(Tanpa Judul)' %>
+                    </div>
+                    <% if (slide.caption) { %>
+                      <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 4px;">
+                        <%= slide.caption %>
+                      </div>
+                    <% } %>
+                    <% if (slide.link_url) { %>
+                      <div style="font-size: 11px; color: var(--primary);">
+                        🔗 Link: <%= slide.link_url %>
+                      </div>
+                    <% } %>
+                  </td>
+                  <td>
+                    <code style="font-size: 12px; background: #f1f5f9; padding: 4px 8px; border-radius: 4px; word-break: break-all;">
+                      <%= slide.image_url %>
+                    </code>
+                  </td>
+                  <td>
+                    <% if (slide.active === 1) { %>
+                      <span class="badge badge-green" style="font-size: 12px; padding: 4px 10px;">✔ Aktif (Tayang)</span>
+                    <% } else { %>
+                      <span class="badge" style="font-size: 12px; padding: 4px 10px; background: #e2e8f0; color: #475569;">Non-aktif</span>
+                    <% } %>
+                  </td>
+                  <td>
+                    <div style="display: flex; gap: 8px; justify-content: flex-end; align-items: center;">
+                      <!-- Quick Toggle -->
+                      <form action="/admin/carousel/<%= slide.id %>/toggle" method="POST" style="margin: 0;">
+                        <button type="submit" class="btn btn-sm <%= slide.active === 1 ? 'btn-outline' : 'btn-primary' %>" style="font-size: 12px; padding: 6px 10px;">
+                          <%= slide.active === 1 ? 'Sembunyikan' : 'Aktifkan' %>
+                        </button>
+                      </form>
+
+                      <!-- Edit Button -->
+                      <button type="button" class="btn btn-secondary btn-sm" style="font-size: 12px; padding: 6px 10px;"
+                        onclick="openEditModal(<%= JSON.stringify(slide) %>)">
+                        ✏️ Edit
+                      </button>
+
+                      <!-- Delete Button -->
+                      <form action="/admin/carousel/<%= slide.id %>/delete" method="POST" style="margin: 0;" onsubmit="return confirm('Apakah Anda yakin ingin menghapus slide ini?');">
+                        <button type="submit" class="btn btn-danger btn-sm" style="font-size: 12px; padding: 6px 10px;">
+                          🗑️
+                        </button>
+                      </form>
+                    </div>
+                  </td>
+                </tr>
+              <% } %>
+            </tbody>
+          </table>
+        </div>
+      <% } else { %>
+        <div style="text-align: center; padding: 40px; color: var(--text-muted);">
+          <div style="font-size: 40px; margin-bottom: 12px;">🖼️</div>
+          <p style="font-size: 16px; font-weight: 600;">Belum ada slide carousel.</p>
+          <p style="font-size: 13px;">Klik tombol "Tambah Slide Baru" di atas untuk menambahkan foto promosi hero.</p>
+        </div>
+      <% } %>
+    </div>
+  </main>
+</div>
+
+<!-- Modal Tambah Slide -->
+<div id="addModal" class="modal-backdrop" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 1000; overflow-y: auto;">
+  <div style="max-width: 550px; margin: 40px auto; background: #fff; border-radius: 16px; padding: 28px; box-shadow: 0 20px 40px rgba(0,0,0,0.2);">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 1px solid var(--border-color); padding-bottom: 12px;">
+      <h3 style="font-size: 18px; color: var(--text-dark); margin: 0;">Tambah Slide Hero Carousel</h3>
+      <button type="button" onclick="closeAddModal()" style="background: none; border: none; font-size: 24px; cursor: pointer; color: #888;">&times;</button>
+    </div>
+
+    <form action="/admin/carousel/add" method="POST" enctype="multipart/form-data">
+      <div style="margin-bottom: 16px;">
+        <label style="display: block; font-weight: 600; font-size: 14px; margin-bottom: 6px;">1. Upload File Foto Baru</label>
+        <input type="file" name="slide_image" accept="image/*" style="width: 100%; padding: 10px; border: 1px dashed var(--border-color); border-radius: 8px; background: #fafafa;">
+        <div style="font-size: 12px; color: var(--text-muted); margin-top: 4px;">Format didukung: JPG, PNG, WEBP (Maksimal 5MB).</div>
+      </div>
+
+      <div style="text-align: center; font-size: 12px; color: var(--text-muted); margin: 12px 0;">— ATAU PILIH GAMBAR YANG ADA —</div>
+
+      <div style="margin-bottom: 16px;">
+        <label style="display: block; font-weight: 600; font-size: 14px; margin-bottom: 6px;">URL Gambar (Lokal atau Eksternal)</label>
+        <input type="text" id="add_image_url" name="image_url" placeholder="/images/products/beefy-nacho.jpg" style="width: 100%; padding: 10px 12px; border: 1px solid var(--border-color); border-radius: 8px;">
+        <div style="display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap;">
+          <button type="button" class="btn btn-outline btn-sm" style="font-size: 11px; padding: 4px 8px;" onclick="document.getElementById('add_image_url').value='/images/products/beefy-nacho.jpg'">
+            Beefy Nacho
+          </button>
+          <button type="button" class="btn btn-outline btn-sm" style="font-size: 11px; padding: 4px 8px;" onclick="document.getElementById('add_image_url').value='/images/products/cheezy-corn.jpg'">
+            Cheezy Corn
+          </button>
+          <button type="button" class="btn btn-outline btn-sm" style="font-size: 11px; padding: 4px 8px;" onclick="document.getElementById('add_image_url').value='/images/cone.jpg'">
+            Cone Kemasan
+          </button>
+        </div>
+      </div>
+
+      <div style="margin-bottom: 16px;">
+        <label style="display: block; font-weight: 600; font-size: 14px; margin-bottom: 6px;">Judul Slide</label>
+        <input type="text" name="title" placeholder="Contoh: Beefy Nacho Cone Spesial" required style="width: 100%; padding: 10px 12px; border: 1px solid var(--border-color); border-radius: 8px;">
+      </div>
+
+      <div style="margin-bottom: 16px;">
+        <label style="display: block; font-weight: 600; font-size: 14px; margin-bottom: 6px;">Keterangan / Caption (Opsional)</label>
+        <input type="text" name="caption" placeholder="Contoh: Limpahan daging cincang dan saus keju lumer" style="width: 100%; padding: 10px 12px; border: 1px solid var(--border-color); border-radius: 8px;">
+      </div>
+
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 18px;">
+        <div>
+          <label style="display: block; font-weight: 600; font-size: 14px; margin-bottom: 6px;">Urutan Tampil (Sort)</label>
+          <input type="number" name="sort_order" value="<%= slides.length + 1 %>" min="1" style="width: 100%; padding: 10px 12px; border: 1px solid var(--border-color); border-radius: 8px;">
+        </div>
+        <div>
+          <label style="display: block; font-weight: 600; font-size: 14px; margin-bottom: 6px;">Link Tombol</label>
+          <input type="text" name="link_url" value="/menu" style="width: 100%; padding: 10px 12px; border: 1px solid var(--border-color); border-radius: 8px;">
+        </div>
+      </div>
+
+      <div style="margin-bottom: 24px;">
+        <label style="display: flex; align-items: center; gap: 8px; font-weight: 600; font-size: 14px; cursor: pointer;">
+          <input type="checkbox" name="active" value="1" checked style="width: 18px; height: 18px;">
+          Langsung Tayangkan Slide Ini di Beranda
+        </label>
+      </div>
+
+      <div style="display: flex; justify-content: flex-end; gap: 10px;">
+        <button type="button" class="btn btn-outline" onclick="closeAddModal()">Batal</button>
+        <button type="submit" class="btn btn-primary">Simpan Slide</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Modal Edit Slide -->
+<div id="editModal" class="modal-backdrop" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 1000; overflow-y: auto;">
+  <div style="max-width: 550px; margin: 40px auto; background: #fff; border-radius: 16px; padding: 28px; box-shadow: 0 20px 40px rgba(0,0,0,0.2);">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 1px solid var(--border-color); padding-bottom: 12px;">
+      <h3 style="font-size: 18px; color: var(--text-dark); margin: 0;">Edit Slide Carousel</h3>
+      <button type="button" onclick="closeEditModal()" style="background: none; border: none; font-size: 24px; cursor: pointer; color: #888;">&times;</button>
+    </div>
+
+    <form id="editForm" method="POST" enctype="multipart/form-data">
+      <div style="display: flex; gap: 16px; align-items: center; margin-bottom: 16px; padding: 12px; background: #f8fafc; border-radius: 8px;">
+        <div style="width: 70px; height: 70px; border-radius: 8px; overflow: hidden; background: #fff; display: flex; align-items: center; justify-content: center; border: 1px solid var(--border-color);">
+          <img id="edit_preview_img" src="" alt="Preview" style="max-width: 100%; max-height: 100%; object-fit: contain;">
+        </div>
+        <div>
+          <div style="font-size: 13px; font-weight: 600; color: var(--text-dark);">Foto Saat Ini:</div>
+          <div id="edit_image_path" style="font-size: 12px; color: var(--text-muted); word-break: break-all;"></div>
+        </div>
+      </div>
+
+      <div style="margin-bottom: 16px;">
+        <label style="display: block; font-weight: 600; font-size: 14px; margin-bottom: 6px;">Ganti Foto (Upload File Baru)</label>
+        <input type="file" name="slide_image" accept="image/*" style="width: 100%; padding: 10px; border: 1px dashed var(--border-color); border-radius: 8px; background: #fafafa;">
+        <div style="font-size: 12px; color: var(--text-muted); margin-top: 4px;">Biarkan kosong jika tidak ingin mengganti foto saat ini.</div>
+      </div>
+
+      <div style="margin-bottom: 16px;">
+        <label style="display: block; font-weight: 600; font-size: 14px; margin-bottom: 6px;">ATAU Masukkan URL Gambar</label>
+        <input type="text" id="edit_image_url" name="image_url" style="width: 100%; padding: 10px 12px; border: 1px solid var(--border-color); border-radius: 8px;">
+      </div>
+
+      <div style="margin-bottom: 16px;">
+        <label style="display: block; font-weight: 600; font-size: 14px; margin-bottom: 6px;">Judul Slide</label>
+        <input type="text" id="edit_title" name="title" required style="width: 100%; padding: 10px 12px; border: 1px solid var(--border-color); border-radius: 8px;">
+      </div>
+
+      <div style="margin-bottom: 16px;">
+        <label style="display: block; font-weight: 600; font-size: 14px; margin-bottom: 6px;">Keterangan / Caption</label>
+        <input type="text" id="edit_caption" name="caption" style="width: 100%; padding: 10px 12px; border: 1px solid var(--border-color); border-radius: 8px;">
+      </div>
+
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 18px;">
+        <div>
+          <label style="display: block; font-weight: 600; font-size: 14px; margin-bottom: 6px;">Urutan Tampil (Sort)</label>
+          <input type="number" id="edit_sort_order" name="sort_order" min="1" style="width: 100%; padding: 10px 12px; border: 1px solid var(--border-color); border-radius: 8px;">
+        </div>
+        <div>
+          <label style="display: block; font-weight: 600; font-size: 14px; margin-bottom: 6px;">Link Tombol</label>
+          <input type="text" id="edit_link_url" name="link_url" style="width: 100%; padding: 10px 12px; border: 1px solid var(--border-color); border-radius: 8px;">
+        </div>
+      </div>
+
+      <div style="margin-bottom: 24px;">
+        <label style="display: flex; align-items: center; gap: 8px; font-weight: 600; font-size: 14px; cursor: pointer;">
+          <input type="checkbox" id="edit_active" name="active" value="1" style="width: 18px; height: 18px;">
+          Tayangkan Slide Ini di Beranda
+        </label>
+      </div>
+
+      <div style="display: flex; justify-content: flex-end; gap: 10px;">
+        <button type="button" class="btn btn-outline" onclick="closeEditModal()">Batal</button>
+        <button type="submit" class="btn btn-primary">Simpan Perubahan</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+  function openAddModal() {
+    document.getElementById('addModal').style.display = 'block';
+  }
+
+  function closeAddModal() {
+    document.getElementById('addModal').style.display = 'none';
+  }
+
+  function openEditModal(slide) {
+    document.getElementById('editForm').action = '/admin/carousel/' + slide.id + '/edit';
+    document.getElementById('edit_preview_img').src = slide.image_url;
+    document.getElementById('edit_image_path').textContent = slide.image_url;
+    document.getElementById('edit_image_url').value = slide.image_url;
+    document.getElementById('edit_title').value = slide.title || '';
+    document.getElementById('edit_caption').value = slide.caption || '';
+    document.getElementById('edit_sort_order').value = slide.sort_order || 1;
+    document.getElementById('edit_link_url').value = slide.link_url || '/menu';
+    document.getElementById('edit_active').checked = (slide.active === 1);
+
+    document.getElementById('editModal').style.display = 'block';
+  }
+
+  function closeEditModal() {
+    document.getElementById('editModal').style.display = 'none';
+  }
+
+  window.addEventListener('click', function(e) {
+    const addM = document.getElementById('addModal');
+    const editM = document.getElementById('editModal');
+    if (e.target === addM) closeAddModal();
+    if (e.target === editM) closeEditModal();
+  });
+</script>
+
+</body>
+</html>

@@ -1,0 +1,16 @@
+<%- include('partials/header') %>
+
+<main class="section" style="min-height: 60vh; display: flex; align-items: center;">
+  <div class="container" style="text-align: center; max-width: 500px;">
+    <div style="font-size: 64px; margin-bottom: 16px;">🌮💥</div>
+    <h1 style="font-size: 32px; color: var(--primary); margin-bottom: 12px;">
+      <%= typeof title !== 'undefined' ? title : 'Terjadi Kesalahan' %>
+    </h1>
+    <p style="color: var(--text-muted); font-size: 16px; margin-bottom: 28px;">
+      <%= typeof message !== 'undefined' ? message : 'Halaman atau tindakan yang Anda minta tidak dapat diproses.' %>
+    </p>
+    <a href="/" class="btn btn-primary">Kembali ke Beranda</a>
+  </div>
+</main>
+
+<%- include('partials/footer') %>

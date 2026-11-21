@@ -1,0 +1,146 @@
+<%- include('partials/header') %>
+
+  <div style="background: #FFE8D6; padding: 24px 0; border-bottom: 1px solid var(--border-color);">
+    <div class="container" style="text-align: center;">
+      <h1 style="font-size: 32px; color: var(--primary); margin-bottom: 6px;">Menu Pilihan NACHOAN</h1>
+      <p style="color: var(--text-muted); font-size: 15px;">Nikmati kerenyahan cone nacho khas NACHOAN dengan bahan
+        berkualitas!</p>
+    </div>
+  </div>
+
+  <main class="section">
+    <div class="container">
+      <!-- Category Filter Tabs -->
+      <div
+        style="display: flex; gap: 10px; overflow-x: auto; padding-bottom: 16px; margin-bottom: 24px; scrollbar-width: none;"
+        id="category-tabs">
+        <button type="button" class="btn btn-primary btn-sm cat-btn active" data-cat="all">Semua Menu</button>
+        <button type="button" class="btn btn-outline btn-sm cat-btn" data-cat="nachos">Nachos</button>
+        <button type="button" class="btn btn-outline btn-sm cat-btn" data-cat="bundling">Bundling</button>
+        <button type="button" class="btn btn-outline btn-sm cat-btn" data-cat="drinks">Minuman</button>
+      </div>
+
+      <!-- Nachos Category -->
+      <div class="cat-section" id="cat-nachos" style="margin-bottom: 40px;">
+        <h2
+          style="font-size: 24px; color: var(--text-dark); margin-bottom: 16px; display: flex; align-items: center; gap: 8px;">
+          🌮 Nachos Cone Series
+        </h2>
+        <div class="product-grid" style="grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));">
+          <% const activeNachos=products.filter(x=> x.category_id === 1 && x.available === 1 && !x.archived); %>
+            <% for (const p of activeNachos) { %>
+              <div class="product-card" data-cat="nachos">
+                <span class="badge badge-red card-badge">MENU UTAMA</span>
+                <a href="/product/<%= p.slug %>" class="product-thumb">
+                  <img src="<%= p.image %>" alt="<%= p.name %>" loading="lazy">
+                </a>
+                <div class="product-info">
+                  <h3 class="product-name">
+                    <a href="/product/<%= p.slug %>">
+                      <%= p.name %>
+                    </a>
+                  </h3>
+                  <p class="product-desc">
+                    <%= p.description %>
+                  </p>
+                  <div class="product-footer">
+                    <div class="product-price">
+                      <%= formatRupiah(p.price) %>
+                    </div>
+                    <div style="display: flex; gap: 8px;">
+                      <a href="/product/<%= p.slug %>" class="btn btn-outline btn-sm">
+                        Detail
+                      </a>
+                      <button type="button" class="btn btn-primary btn-sm"
+                        onclick="Cart.add({ id: <%= p.id %>, type: 'product', name: '<%= p.name %>', price: <%= p.price %>, quantity: 1, image: '<%= p.image %>' })">
+                        + Tambah
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <% } %>
+        </div>
+      </div>
+
+      <!-- Bundling Category (Coming Soon) -->
+      <div class="cat-section" id="cat-bundling" style="margin-bottom: 40px;">
+        <h2
+          style="font-size: 24px; color: var(--text-dark); margin-bottom: 16px; display: flex; align-items: center; gap: 8px;">
+          🍿 Paket Bundling & Combo
+        </h2>
+        <div class="card"
+          style="text-align: center; padding: 40px 20px; background: #FFF8F0; border: 1.5px dashed var(--border-color);">
+          <div style="font-size: 48px; margin-bottom: 12px;">🍿✨</div>
+          <span class="badge badge-yellow" style="font-size: 13px; margin-bottom: 10px;">COMING SOON</span>
+          <h3 style="font-size: 22px; color: var(--text-dark); margin-bottom: 8px;">Paket Bundling Segera Hadir!</h3>
+          <p style="color: var(--text-muted); font-size: 14px; max-width: 450px; margin: 0 auto;">
+            Kami sedang menyiapkan paket combo hemat khusus dengan paduan nachos favorit dan minuman pelengkap untuk
+            Anda. Nantikan peluncurannya!
+          </p>
+        </div>
+      </div>
+
+      <!-- Drinks Category (Coming Soon) -->
+      <div class="cat-section" id="cat-drinks" style="margin-bottom: 40px;">
+        <h2
+          style="font-size: 24px; color: var(--text-dark); margin-bottom: 16px; display: flex; align-items: center; gap: 8px;">
+          🥤 Minuman & Refreshment
+        </h2>
+        <div class="card"
+          style="text-align: center; padding: 40px 20px; background: #FFF8F0; border: 1.5px dashed var(--border-color);">
+          <div style="font-size: 48px; margin-bottom: 12px;">🥤❄️</div>
+          <span class="badge badge-yellow" style="font-size: 13px; margin-bottom: 10px;">COMING SOON</span>
+          <h3 style="font-size: 22px; color: var(--text-dark); margin-bottom: 8px;">Menu Minuman Segera Hadir!</h3>
+          <p style="color: var(--text-muted); font-size: 14px; max-width: 450px; margin: 0 auto;">
+            Menu minuman dingin yang segar pelepas dahaga sedang dalam proses persiapan dan akan segera hadir menemani
+            nacho cone kamu!
+          </p>
+        </div>
+      </div>
+
+    </div>
+  </main>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const tabs = document.querySelectorAll('.cat-btn');
+      const sections = document.querySelectorAll('.cat-section');
+
+      function filterCat(cat) {
+        tabs.forEach(t => {
+          if (t.dataset.cat === cat) {
+            t.className = 'btn btn-primary btn-sm cat-btn active';
+          } else {
+            t.className = 'btn btn-outline btn-sm cat-btn';
+          }
+        });
+
+        sections.forEach(sec => {
+          if (cat === 'all') {
+            sec.style.display = 'block';
+          } else {
+            sec.style.display = sec.id === 'cat-' + cat ? 'block' : 'none';
+          }
+        });
+      }
+
+      tabs.forEach(t => {
+        t.addEventListener('click', () => {
+          filterCat(t.dataset.cat);
+          if (t.dataset.cat !== 'all') {
+            window.location.hash = t.dataset.cat;
+          } else {
+            history.replaceState(null, null, ' ');
+          }
+        });
+      });
+
+      if (window.location.hash) {
+        const hashCat = window.location.hash.replace('#', '');
+        filterCat(hashCat);
+      }
+    });
+  </script>
+
+  <%- include('partials/footer') %>

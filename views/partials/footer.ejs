@@ -1,0 +1,71 @@
+<!-- Sticky Cart Bar (Shown when items > 0 on catalog pages) -->
+<div id="cart-sticky-bar" class="cart-sticky-bar" style="display: none;" onclick="window.location.href='/checkout'">
+  <div class="cart-sticky-left">
+    <span class="cart-sticky-count">0 item</span>
+    <span class="cart-sticky-total">Rp0</span>
+  </div>
+  <div class="cart-sticky-right">
+    Lihat Keranjang ➔
+  </div>
+</div>
+
+<footer class="site-footer">
+  <div class="container">
+    <div class="footer-grid">
+      <div class="footer-col">
+        <img src="/images/logo.jpg" alt="NACHOAN" style="height: 50px; border-radius: 8px; margin-bottom: 16px;">
+        <p style="font-size: 14px; line-height: 1.6; color: #BBB;">
+          <strong>NACHOAN</strong> - Brand camilan nachos kekinian dengan kemasan cone praktis, topping melimpah, dan sensasi extra crunch!
+        </p>
+      </div>
+
+      <div class="footer-col">
+        <h4>Menu & Bundling</h4>
+        <ul>
+          <li><a href="/menu">Semua Menu</a></li>
+          <li><a href="/menu#nachos">Nachos Cone Series</a></li>
+          <li><a href="/menu#bundling">Paket Bundling & Combo</a></li>
+        </ul>
+      </div>
+
+      <div class="footer-col">
+        <h4>Tentang Kami</h4>
+        <ul>
+          <li><a href="/about">Cerita NACHOAN</a></li>
+          <li><a href="/about#kemasan">Inovasi Kemasan Cone</a></li>
+          <li><a href="/about#faq">Pertanyaan Umum (FAQ)</a></li>
+          <li><a href="/admin/login" style="opacity: 0.5;">Akses Admin</a></li>
+        </ul>
+      </div>
+
+      <div class="footer-col">
+        <h4>Kontak & Outlet</h4>
+        <p style="font-size: 14px; margin-bottom: 8px;">
+          📍 <%= typeof settings !== 'undefined' && settings.address ? settings.address : 'Jl. Contoh No. 123, Kota' %>
+        </p>
+        <% 
+          const rawPhone = typeof settings !== 'undefined' && settings.phone ? settings.phone : '+6281234567890';
+          const cleanPhone = rawPhone.replace(/[^0-9]/g, '');
+          const waNumber = cleanPhone.startsWith('0') ? '62' + cleanPhone.slice(1) : (cleanPhone.startsWith('62') ? cleanPhone : '6281234567890');
+          const waMessage = encodeURIComponent('hallo saya ingin bertanya mengenai produk Nachoan');
+        %>
+        <p style="font-size: 14px; margin-bottom: 8px;">
+          📱 WhatsApp: <a href="https://wa.me/<%= waNumber %>?text=<%= waMessage %>" target="_blank" rel="noopener noreferrer" style="color: #FFF; text-decoration: underline; font-weight: 600;"><%= rawPhone %></a>
+        </p>
+        <p style="font-size: 14px; margin-bottom: 8px;">
+          🕒 <%= typeof settings !== 'undefined' && settings.hours ? settings.hours : 'Setiap Hari 10:00 - 22:00' %>
+        </p>
+      </div>
+    </div>
+
+    <div class="footer-bottom">
+      <div>&copy; 2026 NACHOAN. Hak Cipta Dilindungi.</div>
+      <div>Good Food. Good Mood. Extra Crunch.</div>
+    </div>
+  </div>
+</footer>
+
+<script src="/js/cart.js"></script>
+<script src="/js/main.js"></script>
+</body>
+</html>

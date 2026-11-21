@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title><%= typeof title !== 'undefined' ? title : 'NACHOAN' %></title>
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="icon" type="image/jpeg" href="/images/logo.jpg">
+</head>
+<body>
+
+<header class="site-header">
+  <div class="container">
+    <div class="nav-wrap">
+      <!-- Logo -->
+      <a href="/" class="logo-link">
+        <img src="/images/logo.jpg" alt="NACHOAN" class="logo-img">
+      </a>
+
+      <!-- Desktop Navigation -->
+      <nav class="nav-links">
+        <a href="/" class="nav-link <%= path === '/' ? 'active' : '' %>">Home</a>
+        <a href="/menu" class="nav-link <%= path === '/menu' ? 'active' : '' %>">Menu</a>
+        <a href="/menu#bundling" class="nav-link <%= path === '/bundling' ? 'active' : '' %>">Bundling</a>
+        <a href="/about" class="nav-link <%= path === '/about' ? 'active' : '' %>">About</a>
+      </nav>
+
+      <!-- Actions -->
+      <div class="header-actions">
+        <a href="/checkout" class="cart-btn-nav" title="Keranjang Belanja">
+          🛒
+          <span class="cart-badge" style="display: none;">0</span>
+        </a>
+
+        <button type="button" class="mobile-toggle" id="mobile-toggle-btn" aria-label="Menu">
+          ☰
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Mobile Menu Dropdown -->
+  <div class="mobile-menu" id="mobile-menu">
+    <a href="/" class="nav-link">Home</a>
+    <a href="/menu" class="nav-link">Menu</a>
+    <a href="/menu#bundling" class="nav-link">Bundling</a>
+    <a href="/about" class="nav-link">About</a>
+    <a href="/checkout" class="nav-link" style="color: var(--primary);">🛒 Keranjang Belanja</a>
+  </div>
+</header>

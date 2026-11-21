@@ -1,0 +1,460 @@
+<%- include('partials/header') %>
+
+  <div style="background: #FFE8D6; padding: 24px 0; border-bottom: 1px solid var(--border-color);">
+    <div class="container" style="text-align: center;">
+      <h1 style="font-size: 30px; color: var(--primary); margin-bottom: 4px;">Checkout & Pembayaran</h1>
+      <p style="color: var(--text-muted); font-size: 14px;">Tinjau pesanan Anda, lengkapi data penerima, dan selesaikan
+        pesanan.</p>
+    </div>
+  </div>
+
+  <main class="section">
+    <div class="container">
+      <!-- If Cart is empty -->
+      <div id="cart-empty-view" class="card" style="display: none; text-align: center; padding: 48px 20px;">
+        <div style="font-size: 56px; margin-bottom: 16px;">🛒</div>
+        <h2 style="font-size: 24px; color: var(--text-dark); margin-bottom: 8px;">Keranjang Belanja Masih Kosong</h2>
+        <p style="color: var(--text-muted); margin-bottom: 24px;">Yuk pilih camilan nachos favoritmu sekarang!</p>
+        <a href="/menu" class="btn btn-primary">Lihat Menu &rsaquo;</a>
+      </div>
+
+      <!-- Main Checkout Form -->
+      <div id="cart-content-view" style="display: none;">
+        <form id="checkout-form">
+          <div style="display: grid; grid-template-columns: 1fr; gap: 28px;" class="checkout-grid">
+
+            <!-- Left Column: Cart items & Customer info -->
+            <div>
+              <!-- Order Items Review -->
+              <div class="card">
+                <div
+                  style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px; border-bottom: 1px solid var(--border-color); padding-bottom: 12px;">
+                  <h2 style="font-size: 20px; color: var(--text-dark);">Daftar Pesanan</h2>
+                  <button type="button" class="btn btn-outline btn-sm"
+                    onclick="Cart.clear(); window.location.reload();">
+                    Kosongkan
+                  </button>
+                </div>
+
+                <div id="checkout-items-list" style="display: flex; flex-direction: column; gap: 16px;">
+                  <!-- Populated by JS -->
+                </div>
+              </div>
+
+              <!-- Customer Details & Delivery Container -->
+              <div class="card" id="customer-data-container">
+                <h2
+                  style="font-size: 20px; color: var(--text-dark); margin-bottom: 18px; border-bottom: 1px solid var(--border-color); padding-bottom: 12px;">
+                  Data Pelanggan
+                </h2>
+
+                <div class="form-group">
+                  <label class="form-label" for="cust-name">Nama Lengkap *</label>
+                  <input type="text" id="cust-name" name="customer_name" class="form-control"
+                    placeholder="Contoh: Rafi Pratama" required>
+                </div>
+
+                <div class="form-group">
+                  <label class="form-label" for="cust-phone">Nomor WhatsApp / HP *</label>
+                  <input type="tel" id="cust-phone" name="customer_phone" class="form-control"
+                    placeholder="Contoh: 081234567890" required>
+                  <small style="color: var(--text-muted); font-size: 12px;">Digunakan untuk konfirmasi pesanan dan
+                    verifikasi QRIS.</small>
+                </div>
+
+                <div class="form-group">
+                  <label class="form-label">Metode Pengambilan *</label>
+                  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                    <label
+                      style="border: 1.5px solid var(--primary); border-radius: var(--radius-sm); padding: 14px; display: flex; align-items: center; gap: 10px; cursor: pointer; background: var(--white);"
+                      id="label-pickup">
+                      <input type="radio" name="method" value="pickup" checked onchange="onMethodChange('pickup')">
+                      <div>
+                        <div style="font-weight: 700; font-size: 14px;">Ambil di Tempat</div>
+                        <div style="font-size: 12px; color: var(--text-muted);">Gratis (Rp0)</div>
+                      </div>
+                    </label>
+
+                    <label
+                      style="border: 1.5px solid var(--border-color); border-radius: var(--radius-sm); padding: 14px; display: flex; align-items: center; gap: 10px; cursor: pointer; background: var(--white);"
+                      id="label-delivery">
+                      <input type="radio" name="method" value="delivery" onchange="onMethodChange('delivery')">
+                      <div>
+                        <div style="font-weight: 700; font-size: 14px;">Delivery</div>
+                        <div style="font-size: 12px; color: var(--text-muted);">Rp2.000 (Diluar Telkom)</div>
+                      </div>
+                    </label>
+                  </div>
+                </div>
+
+                <!-- Delivery Fields (Shown when Delivery selected) -->
+                <div id="delivery-details"
+                  style="display: none; background: #FFF8F0; padding: 16px; border-radius: var(--radius-sm); border: 1.5px solid #FFD8A8; margin-bottom: 20px;">
+                  <div class="form-group">
+                    <label class="form-label" style="font-weight: 700; color: var(--text-dark);">Zona
+                      Pengiriman:</label>
+                    <select id="delivery-zone" class="form-control" onchange="recalculate()">
+                      <% if (typeof deliveryZones !=='undefined' && deliveryZones.length> 0) { %>
+                        <% for (const zone of deliveryZones) { %>
+                          <option value="<%= zone.id %>" data-fee="<%= zone.fee %>">
+                            <%= zone.name %> - <%= formatRupiah(zone.fee) %>
+                          </option>
+                          <% } %>
+                            <% } else { %>
+                              <option value="1" data-fee="2000">Diluar Telkom - Rp2.000</option>
+                              <% } %>
+                    </select>
+                    <small style="color: var(--text-muted); font-size: 12px; margin-top: 4px; display: block;">Ongkos
+                      kirim flat Rp2.000 untuk pengantaran wilayah Diluar Telkom.</small>
+                  </div>
+
+                  <div class="form-group" style="margin-bottom: 0;">
+                    <label class="form-label" style="font-weight: 700; color: var(--text-dark);">Alamat Lengkap
+                      Pengantaran *</label>
+                    <textarea id="cust-address" class="form-control" rows="3"
+                      placeholder="Nama jalan, gedung/kost, nomor rumah, patokan lokasi..."></textarea>
+                  </div>
+                </div>
+
+                <div class="form-group" style="margin-bottom: 0;">
+                  <label class="form-label" for="cust-notes">Catatan Pesanan (Opsional)</label>
+                  <input type="text" id="cust-notes" name="notes" class="form-control"
+                    placeholder="Contoh: Saus dipisah, saus ekstra banyak, dsb.">
+                </div>
+              </div>
+            </div>
+
+            <!-- Right Column: Summary -->
+            <div>
+              <div class="card" style="position: sticky; top: 90px;">
+                <h2
+                  style="font-size: 20px; color: var(--text-dark); margin-bottom: 18px; border-bottom: 1px solid var(--border-color); padding-bottom: 12px;">
+                  Ringkasan Pembayaran
+                </h2>
+
+                <!-- Price Breakdown -->
+                <div style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px; font-size: 14px;">
+                  <div style="display: flex; justify-content: space-between;">
+                    <span style="color: var(--text-muted);">Subtotal</span>
+                    <span id="summary-subtotal" style="font-weight: 700;">Rp0</span>
+                  </div>
+                  <div id="summary-discount-row"
+                    style="display: none; justify-content: space-between; color: var(--accent-green); font-weight: 700;">
+                    <span>Diskon</span>
+                    <span id="summary-discount">-Rp0</span>
+                  </div>
+                  <div style="display: flex; justify-content: space-between;">
+                    <span style="color: var(--text-muted);">Biaya Pengiriman</span>
+                    <span id="summary-delivery-fee" style="font-weight: 700;">Rp0</span>
+                  </div>
+                  <div
+                    style="border-top: 1.5px dashed var(--border-color); margin-top: 8px; padding-top: 14px; display: flex; justify-content: space-between; align-items: baseline;">
+                    <span style="font-size: 16px; font-weight: 800;">Total Pembayaran</span>
+                    <span id="summary-total"
+                      style="font-size: 24px; font-weight: 800; color: var(--primary);">Rp0</span>
+                  </div>
+                </div>
+
+                <!-- Payment Method Notice -->
+                <div
+                  style="background: #FFF8F0; padding: 12px; border-radius: var(--radius-sm); border: 1px solid var(--border-color); margin-bottom: 20px; font-size: 13px; line-height: 1.5; color: var(--text-dark);">
+                  💳 <strong>Metode Pembayaran:</strong> QRIS Resmi NACHOAN (Mendukung BCA, Mandiri, BRI, BNI, GoPay,
+                  OVO, Dana, ShopeePay). QRIS akan ditampilkan setelah Anda menekan tombol di bawah.
+                </div>
+
+                <!-- Submit Button -->
+                <button type="submit" id="submit-order-btn" class="btn btn-primary btn-block"
+                  style="padding: 16px; font-size: 16px;">
+                  🌮 Lanjut ke Pembayaran QRIS &rsaquo;
+                </button>
+              </div>
+            </div>
+
+          </div>
+        </form>
+      </div>
+    </div>
+  </main>
+
+  <style>
+    @media (min-width: 900px) {
+      .checkout-grid {
+        grid-template-columns: 1.3fr 0.7fr !important;
+      }
+    }
+  </style>
+
+  <script>
+    let currentMethod = 'pickup';
+    let currentPromoCode = '';
+    let serverCalc = null;
+
+    function onMethodChange(method) {
+      currentMethod = method;
+      const deliveryBox = document.getElementById('delivery-details');
+      const labelPickup = document.getElementById('label-pickup');
+      const labelDelivery = document.getElementById('label-delivery');
+
+      if (method === 'delivery') {
+        deliveryBox.style.display = 'block';
+        labelDelivery.style.borderColor = 'var(--primary)';
+        labelPickup.style.borderColor = 'var(--border-color)';
+      } else {
+        deliveryBox.style.display = 'none';
+        labelPickup.style.borderColor = 'var(--primary)';
+        labelDelivery.style.borderColor = 'var(--border-color)';
+      }
+      recalculate();
+    }
+
+    async function recalculate() {
+      const items = Cart.get();
+      if (items.length === 0) {
+        document.getElementById('cart-empty-view').style.display = 'block';
+        document.getElementById('cart-content-view').style.display = 'none';
+        return;
+      }
+
+      document.getElementById('cart-empty-view').style.display = 'none';
+      document.getElementById('cart-content-view').style.display = 'block';
+
+      renderItemsList(items);
+
+      const zoneSelect = document.getElementById('delivery-zone');
+      const zoneId = currentMethod === 'delivery' && zoneSelect ? zoneSelect.value : null;
+
+      try {
+        const res = await fetch('/api/cart/validate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            items: items,
+            promoCode: currentPromoCode,
+            method: currentMethod,
+            zoneId: zoneId
+          })
+        });
+        const result = await res.json();
+        if (result.success) {
+          serverCalc = result.data;
+          updateSummaryUI(result.data);
+        }
+      } catch (err) {
+        console.error('Validation error', err);
+      }
+    }
+
+    function renderItemsList(items) {
+      const container = document.getElementById('checkout-items-list');
+      container.innerHTML = '';
+
+      items.forEach((item, index) => {
+        const div = document.createElement('div');
+        div.style.display = 'flex';
+        div.style.justifyContent = 'space-between';
+        div.style.alignItems = 'center';
+        div.style.gap = '12px';
+        div.style.paddingBottom = '12px';
+        div.style.borderBottom = '1px solid #F3F4F6';
+
+        const left = document.createElement('div');
+        left.style.display = 'flex';
+        left.style.alignItems = 'center';
+        left.style.gap = '12px';
+
+        const thumb = document.createElement('img');
+        thumb.src = item.image || '/images/products/loaded-nachos.jpg';
+        thumb.style.width = '52px';
+        thumb.style.height = '52px';
+        thumb.style.borderRadius = '8px';
+        thumb.style.objectFit = 'cover';
+        left.appendChild(thumb);
+
+        const info = document.createElement('div');
+        const nameEl = document.createElement('div');
+        nameEl.style.fontWeight = '700';
+        nameEl.style.fontSize = '15px';
+        nameEl.textContent = item.name;
+        info.appendChild(nameEl);
+
+        if (item.variant) {
+          const varEl = document.createElement('div');
+          varEl.style.fontSize = '12px';
+          varEl.style.color = 'var(--primary)';
+          varEl.style.fontWeight = '700';
+          varEl.textContent = `Level: ${item.variant}`;
+          info.appendChild(varEl);
+        }
+
+        const priceEl = document.createElement('div');
+        priceEl.style.fontSize = '13px';
+        priceEl.style.color = 'var(--text-muted)';
+        priceEl.textContent = `Rp${item.price.toLocaleString('id-ID')} x ${item.quantity}`;
+        info.appendChild(priceEl);
+
+        left.appendChild(info);
+        div.appendChild(left);
+
+        // Controls
+        const right = document.createElement('div');
+        right.style.display = 'flex';
+        right.style.alignItems = 'center';
+        right.style.gap = '8px';
+
+        const stepper = document.createElement('div');
+        stepper.style.display = 'inline-flex';
+        stepper.style.alignItems = 'center';
+        stepper.style.border = '1px solid var(--border-color)';
+        stepper.style.borderRadius = '9999px';
+        stepper.style.overflow = 'hidden';
+
+        const minusBtn = document.createElement('button');
+        minusBtn.type = 'button';
+        minusBtn.textContent = '-';
+        minusBtn.style.cssText = 'width: 28px; height: 28px; border: none; background: none; font-weight: bold; cursor: pointer;';
+        minusBtn.onclick = () => { Cart.updateQty(index, item.quantity - 1); recalculate(); };
+
+        const qtySpan = document.createElement('span');
+        qtySpan.style.cssText = 'width: 24px; text-align: center; font-size: 13px; font-weight: 700;';
+        qtySpan.textContent = item.quantity;
+
+        const plusBtn = document.createElement('button');
+        plusBtn.type = 'button';
+        plusBtn.textContent = '+';
+        plusBtn.style.cssText = 'width: 28px; height: 28px; border: none; background: none; font-weight: bold; cursor: pointer;';
+        plusBtn.onclick = () => { Cart.updateQty(index, item.quantity + 1); recalculate(); };
+
+        stepper.appendChild(minusBtn);
+        stepper.appendChild(qtySpan);
+        stepper.appendChild(plusBtn);
+        right.appendChild(stepper);
+
+        const delBtn = document.createElement('button');
+        delBtn.type = 'button';
+        delBtn.innerHTML = '🗑️';
+        delBtn.style.cssText = 'border: none; background: none; cursor: pointer; font-size: 16px; opacity: 0.6;';
+        delBtn.title = 'Hapus item';
+        delBtn.onclick = () => { Cart.remove(index); recalculate(); };
+        right.appendChild(delBtn);
+
+        div.appendChild(right);
+        container.appendChild(div);
+      });
+    }
+
+    function updateSummaryUI(calc) {
+      document.getElementById('summary-subtotal').textContent = 'Rp' + calc.subtotal.toLocaleString('id-ID');
+      document.getElementById('summary-delivery-fee').textContent = 'Rp' + calc.deliveryFee.toLocaleString('id-ID');
+      document.getElementById('summary-total').textContent = 'Rp' + calc.total.toLocaleString('id-ID');
+
+      const discountRow = document.getElementById('summary-discount-row');
+      const promoMsgEl = document.getElementById('promo-msg');
+
+      if (calc.promo && calc.promo.valid) {
+        if (discountRow) discountRow.style.display = 'flex';
+        const promoCodeSpan = document.getElementById('summary-promo-code');
+        if (promoCodeSpan) promoCodeSpan.textContent = calc.promo.code;
+        const discountSpan = document.getElementById('summary-discount');
+        if (discountSpan) discountSpan.textContent = '-Rp' + calc.promo.discount.toLocaleString('id-ID');
+        if (promoMsgEl) {
+          promoMsgEl.style.color = 'var(--accent-green)';
+          promoMsgEl.textContent = calc.promo.message;
+        }
+      } else {
+        if (discountRow) discountRow.style.display = 'none';
+        if (promoMsgEl) {
+          if (currentPromoCode) {
+            promoMsgEl.style.color = 'var(--primary)';
+            promoMsgEl.textContent = calc.promo ? calc.promo.message : 'Kode promo tidak valid.';
+          } else {
+            promoMsgEl.textContent = '';
+          }
+        }
+      }
+
+      // Gift Alert
+      const giftAlert = document.getElementById('gift-alert-box');
+      if (giftAlert) {
+        giftAlert.style.display = calc.hasGift ? 'block' : 'none';
+      }
+    }
+
+    function applyPromo() {
+      const code = document.getElementById('promo-input').value.trim();
+      currentPromoCode = code;
+      recalculate();
+    }
+
+    // Form Submission
+    document.addEventListener('DOMContentLoaded', () => {
+      recalculate();
+
+      const form = document.getElementById('checkout-form');
+      form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+
+        const name = document.getElementById('cust-name').value.trim();
+        const phone = document.getElementById('cust-phone').value.trim();
+        const notes = document.getElementById('cust-notes').value.trim();
+        const address = currentMethod === 'delivery' ? document.getElementById('cust-address').value.trim() : null;
+        const zoneSelect = document.getElementById('delivery-zone');
+        const zoneId = currentMethod === 'delivery' && zoneSelect ? zoneSelect.value : null;
+
+        if (!name) {
+          alert('Nama pemesan wajib diisi.');
+          return;
+        }
+        if (!phone) {
+          alert('Nomor WhatsApp wajib diisi.');
+          return;
+        }
+        if (currentMethod === 'delivery' && !address) {
+          alert('Alamat pengantaran wajib diisi untuk delivery.');
+          return;
+        }
+
+        const submitBtn = document.getElementById('submit-order-btn');
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Memproses Pesanan...';
+
+        const idempotencyKey = getIdempotencyKey();
+
+        try {
+          const res = await fetch('/checkout', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              customer_name: name,
+              customer_phone: phone,
+              notes: notes,
+              method: currentMethod,
+              address: address,
+              delivery_zone_id: zoneId,
+              items: Cart.get(),
+              promo_code: currentPromoCode,
+              idempotency_key: idempotencyKey
+            })
+          });
+
+          const data = await res.json();
+          if (data.success && data.redirect) {
+            // Clear cart and idempotency key
+            Cart.clear();
+            sessionStorage.removeItem('nachoan_idempotency_key');
+            window.location.href = data.redirect;
+          } else {
+            alert(data.message || 'Gagal memproses pesanan.');
+            submitBtn.disabled = false;
+            submitBtn.textContent = '🌮 Lanjut ke Pembayaran QRIS ›';
+          }
+        } catch (err) {
+          console.error('Submit error', err);
+          alert('Terjadi kesalahan koneksi server.');
+          submitBtn.disabled = false;
+          submitBtn.textContent = '🌮 Lanjut ke Pembayaran QRIS ›';
+        }
+      });
+    });
+  </script>
+
+  <%- include('partials/footer') %>

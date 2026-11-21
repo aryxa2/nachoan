@@ -1,0 +1,42 @@
+<aside class="admin-sidebar">
+  <div class="admin-logo">
+    <img src="/images/logo.jpg" alt="NACHOAN" style="height: 38px; border-radius: 6px;">
+    <div>
+      <div style="font-weight: 800; font-size: 16px; color: var(--secondary);">NACHOAN</div>
+      <div style="font-size: 11px; color: #888;">Admin Panel</div>
+    </div>
+  </div>
+
+  <nav class="admin-nav">
+    <a href="/admin" class="admin-nav-item <%= path === '/admin' ? 'active' : '' %>">
+      📊 Dashboard
+    </a>
+    <a href="/admin/orders" class="admin-nav-item <%= path.startsWith('/admin/orders') ? 'active' : '' %>">
+      📦 Kelola Pesanan
+    </a>
+    <a href="/admin/products" class="admin-nav-item <%= path.startsWith('/admin/products') ? 'active' : '' %>">
+      🌮 Menu Produk
+    </a>
+    <a href="/admin/bundles" class="admin-nav-item <%= path.startsWith('/admin/bundles') ? 'active' : '' %>">
+      🍿 Paket Bundling
+    </a>
+    <a href="/admin/promos" class="admin-nav-item <%= path.startsWith('/admin/promos') ? 'active' : '' %>">
+      🏷️ Promo & Diskon
+    </a>
+    <a href="/admin/carousel" class="admin-nav-item <%= path.startsWith('/admin/carousel') ? 'active' : '' %>">
+      🖼️ Hero Carousel
+    </a>
+    <a href="/admin/settings" class="admin-nav-item <%= path.startsWith('/admin/settings') ? 'active' : '' %>">
+      ⚙️ Pengaturan & QRIS
+    </a>
+  </nav>
+
+  <div style="padding-top: 20px; border-top: 1px solid #333; margin-top: auto; display: flex; flex-direction: column; gap: 8px;">
+    <a href="/" target="_blank" style="font-size: 13px; color: #AAA; display: flex; align-items: center; gap: 6px;">
+      🌐 Lihat Website Toko
+    </a>
+    <a href="/admin/logout" style="font-size: 13px; color: #f87171; display: flex; align-items: center; gap: 6px;">
+      🚪 Keluar (Logout)
+    </a>
+  </div>
+</aside>

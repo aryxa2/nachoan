@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>
+    <%= title %>
+  </title>
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="icon" type="image/jpeg" href="/images/logo.jpg">
+</head>
+
+<body>
+
+  <div class="admin-layout">
+    <%- include('sidebar') %>
+
+      <main class="admin-main">
+        <div style="margin-bottom: 24px;">
+          <h1 style="font-size: 26px; color: var(--text-dark);">Pengaturan Toko, QRIS & Google Sheets</h1>
+          <p style="color: var(--text-muted); font-size: 14px;">Atur informasi kontak outlet, tarif ongkir, aset QRIS,
+            dan integrasi Google Spreadsheet / Apps Script.</p>
+        </div>
+
+        <% if (typeof req !=='undefined' && req.query) { %>
+          <% if (req.query.msg==='saved' ) { %>
+            <div
+              style="background: #dcfce7; border: 1px solid #86efac; color: #166534; padding: 12px 16px; border-radius: var(--radius-sm); margin-bottom: 20px; font-weight: 700;">
+              ✔ Pengaturan toko berhasil disimpan.
+            </div>
+            <% } else if (req.query.msg==='synced' ) { %>
+              <div
+                style="background: #dcfce7; border: 1px solid #86efac; color: #166534; padding: 12px 16px; border-radius: var(--radius-sm); margin-bottom: 20px; font-weight: 700;">
+                ✔ Seluruh data produk, paket bundling, dan promo berhasil disinkronkan ke Google Spreadsheet!
+              </div>
+              <% } else if (req.query.msg==='qris_updated' ) { %>
+                <div
+                  style="background: #dcfce7; border: 1px solid #86efac; color: #166534; padding: 12px 16px; border-radius: var(--radius-sm); margin-bottom: 20px; font-weight: 700;">
+                  ✔ Aset QRIS resmi berhasil diperbarui.
+                </div>
+                <% } else if (req.query.error) { %>
+                  <div
+                    style="background: #fee2e2; border: 1px solid #fca5a5; color: #991b1b; padding: 12px 16px; border-radius: var(--radius-sm); margin-bottom: 20px; font-weight: 700;">
+                    <%= req.query.error %>
+                  </div>
+                  <% } %>
+                    <% } %>
+
+                      <div style="display: grid; grid-template-columns: 1fr; gap: 28px;" class="settings-grid">
+
+                        <!-- Left Column: Store Settings & Google Sheets -->
+                        <div>
+                          <!-- Store Settings Form -->
+                          <div class="card">
+                            <h2
+                              style="font-size: 18px; margin-bottom: 16px; border-bottom: 1px solid var(--border-color); padding-bottom: 10px;">
+                              Informasi Outlet & Operasional
+                            </h2>
+
+                            <form action="/admin/settings" method="POST">
+                              <div class="form-group">
+                                <label class="form-label">Nama Brand / Toko</label>
+                                <input type="text" name="store_name" class="form-control"
+                                  value="<%= settings.store_name || 'NACHOAN' %>" required>
+                              </div>
+
+                              <div class="form-group">
+                                <label class="form-label">Alamat Lengkap Outlet (Untuk Pickup)</label>
+                                <textarea name="address" class="form-control"
+                                  required><%= settings.address || 'Jl. Contoh No. 123, Kota' %></textarea>
+                              </div>
+
+                              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                                <div class="form-group">
+                                  <label class="form-label">Nomor WhatsApp Admin</label>
+                                  <input type="text" name="phone" class="form-control"
+                                    value="<%= settings.phone || '+6281234567890' %>" required>
+                                </div>
+                                <div class="form-group">
+                                  <label class="form-label">Instagram</label>
+                                  <input type="text" name="instagram" class="form-control"
+                                    value="<%= settings.instagram || '@nachoan.id' %>">
+                                </div>
+                              </div>
+
+                              <div class="form-group">
+                                <label class="form-label">Jam Operasional</label>
+                                <input type="text" name="hours" class="form-control"
+                                  value="<%= settings.hours || 'Senin - Minggu, 10:00 - 22:00' %>" required>
+                              </div>
+
+                              <div class="form-group">
+                                <label class="form-label">Tarif Flat Pengantaran Luar Telkom (Rp)</label>
+                                <input type="number" name="delivery_fee" class="form-control"
+                                  value="<%= deliveryZone ? deliveryZone.fee : 8000 %>" required>
+                              </div>
+
+                              <div class="form-group">
+                                <label class="form-label">Google Apps Script Web App URL (Opsional)</label>
+                                <input type="url" name="apps_script_url" class="form-control"
+                                  placeholder="https://script.google.com/macros/s/.../exec"
+                                  value="<%= settings.apps_script_url || '' %>">
+                                <small style="color: var(--text-muted); font-size: 12px;">URL deployment Apps Script
+                                  untuk get/sync data secara otomatis.</small>
+                              </div>
+
+                              <button type="submit" class="btn btn-primary" style="padding: 12px 28px;">
+                                Simpan Pengaturan
+                              </button>
+                            </form>
+                          </div>
+
+                          <!-- Google Sheets Sync Box -->
+                          <div class="card" style="border-left: 4px solid #16a34a;">
+                            <h2 style="font-size: 18px; margin-bottom: 12px; color: #166534;">
+                              📊 Integrasi Google Spreadsheet
+                            </h2>
+                            <p
+                              style="font-size: 13px; color: var(--text-muted); margin-bottom: 14px; line-height: 1.5;">
+                              Data produk, bundling, promo, dan pesanan telah terhubung dengan Google Spreadsheet Anda.
+                            </p>
+
+                            <div
+                              style="background: #F3F4F6; padding: 12px; border-radius: var(--radius-sm); font-size: 13px; margin-bottom: 16px;">
+                              <div><strong>Spreadsheet ID:</strong>
+                                <code>1YDenYpVKZVnhv5jBxp4iMdxxLMgHGOSTn3qjkBmEmJ8</code></div>
+                              <div style="margin-top: 6px;">
+                                <a href="https://docs.google.com/spreadsheets/d/1YDenYpVKZVnhv5jBxp4iMdxxLMgHGOSTn3qjkBmEmJ8/edit"
+                                  target="_blank" style="color: #2563eb; font-weight: 700;">
+                                  Buka Google Spreadsheet di Tab Baru &rsaquo;
+                                </a>
+                              </div>
+                            </div>
+
+                            <form action="/admin/settings/sync-sheets" method="POST">
+                              <button type="submit" class="btn btn-outline"
+                                style="border-color: #16a34a; color: #16a34a; font-size: 13px; padding: 10px 20px;">
+                                🔄 Sinkronkan Data ke Google Sheets Sekarang
+                              </button>
+                            </form>
+                          </div>
+                        </div>
+
+                        <!-- Right Column: QRIS Management -->
+                        <div>
+                          <div class="card">
+                            <h2
+                              style="font-size: 18px; margin-bottom: 16px; border-bottom: 1px solid var(--border-color); padding-bottom: 10px;">
+                              Aset QRIS Pembayaran Toko
+                            </h2>
+
+                            <div
+                              style="display: flex; flex-direction: column; align-items: center; text-align: center; margin-bottom: 20px;">
+                              <div
+                                style="border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 12px; background: #FFF; max-width: 240px; margin-bottom: 12px;">
+                                <img src="<%= currentQris ? currentQris.file_path : '/images/qris.jpg' %>"
+                                  alt="QRIS Aktif" style="width: 100%; border-radius: 4px;">
+                              </div>
+                              <div style="font-size: 13px; color: var(--text-muted);">
+                                NMID: <strong>ID1026642568079</strong><br>
+                                Aset Versi: <strong>#<%= currentQris ? currentQris.version : 1 %></strong> (Aktif)
+                              </div>
+                            </div>
+
+                            <div style="border-top: 1px solid var(--border-color); padding-top: 16px;">
+                              <h3 style="font-size: 15px; margin-bottom: 10px;">Ganti / Perbarui QRIS</h3>
+                              <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 14px;">
+                                Jika merchant QRIS Anda diperbarui, unggah gambar barcode QRIS baru (JPG/PNG). QRIS lama
+                                akan disimpan dalam arsip versi.
+                              </p>
+
+                              <form action="/admin/settings/qris" method="POST" enctype="multipart/form-data">
+                                <div class="form-group">
+                                  <input type="file" name="qris_file" class="form-control"
+                                    accept="image/jpeg,image/png,image/jpg" required>
+                                </div>
+                                <button type="submit" class="btn btn-outline btn-block" style="padding: 10px;"
+                                  onclick="return confirm('Apakah Anda yakin ingin memperbarui kode QRIS toko?')">
+                                  Unggah QRIS Baru
+                                </button>
+                              </form>
+                            </div>
+                          </div>
+                        </div>
+
+                      </div>
+      </main>
+  </div>
+
+  <style>
+    @media (min-width: 900px) {
+      .settings-grid {
+        grid-template-columns: 1.2fr 0.8fr !important;
+      }
+    }
+  </style>
+
+</body>
+
+</html>

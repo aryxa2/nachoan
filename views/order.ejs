@@ -1,0 +1,273 @@
+<%- include('partials/header') %>
+
+<div style="background: #FFE8D6; padding: 24px 0; border-bottom: 1px solid var(--border-color);">
+  <div class="container" style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 16px;">
+    <div>
+      <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 4px;">
+        <h1 style="font-size: 26px; color: var(--text-dark);">Pesanan <%= order.order_number %></h1>
+        <button type="button" class="btn btn-outline btn-sm" onclick="copyToClipboard('<%= order.order_number %>', 'Nomor pesanan disalin!')">
+          Salin ID
+        </button>
+      </div>
+      <p style="color: var(--text-muted); font-size: 14px;">Dibuat pada: <%= formatDate(order.created_at) %></p>
+    </div>
+    <div>
+      <span class="badge" style="background: <%= statusInfo.bg %>; color: <%= statusInfo.text %>; font-size: 14px; padding: 8px 16px;">
+        <%= statusInfo.label %>
+      </span>
+    </div>
+  </div>
+</div>
+
+<main class="section">
+  <div class="container">
+    <% if (typeof req !== 'undefined' && req.query && req.query.uploaded) { %>
+      <div style="background: #dcfce7; border: 1px solid #86efac; color: #166534; padding: 14px 20px; border-radius: var(--radius-sm); margin-bottom: 24px; font-weight: 700;">
+        ✔ Bukti transfer berhasil diunggah! Mohon tunggu verifikasi admin.
+      </div>
+    <% } %>
+
+    <div style="display: grid; grid-template-columns: 1fr; gap: 28px;" class="order-grid">
+      
+      <!-- Left Column: Items & Details -->
+      <div>
+        <!-- Order Items -->
+        <div class="card">
+          <h2 style="font-size: 20px; color: var(--text-dark); margin-bottom: 16px; border-bottom: 1px solid var(--border-color); padding-bottom: 12px;">
+            Rincian Pesanan
+          </h2>
+
+          <div style="display: flex; flex-direction: column; gap: 14px; margin-bottom: 20px;">
+            <% for (const item of items) { %>
+              <div style="display: flex; justify-content: space-between; align-items: flex-start; padding-bottom: 12px; border-bottom: 1px solid #F3F4F6;">
+                <div>
+                  <div style="font-weight: 700; font-size: 15px;">
+                    <%= item.quantity %>× <%= item.name %>
+                    <% if (item.is_gift) { %>
+                      <span class="badge badge-green" style="font-size: 11px; margin-left: 6px;">BONUS FREE</span>
+                    <% } %>
+                  </div>
+                  <% if (item.variant) { %>
+                    <div style="font-size: 12px; color: var(--primary); font-weight: 700; margin-top: 2px;">
+                      Level Pedas: <%= item.variant %>
+                    </div>
+                  <% } %>
+                  <% if (item.components) { %>
+                    <div style="font-size: 12px; color: var(--text-muted); margin-top: 2px;">
+                      Komponen: <%= JSON.parse(item.components).join(', ') %>
+                    </div>
+                  <% } %>
+                </div>
+                <div style="font-weight: 700; font-size: 15px;">
+                  <%= formatRupiah(item.price * item.quantity) %>
+                </div>
+              </div>
+            <% } %>
+          </div>
+
+          <!-- Total Breakdown -->
+          <div style="display: flex; flex-direction: column; gap: 8px; font-size: 14px; background: #FFF8F0; padding: 16px; border-radius: var(--radius-sm);">
+            <div style="display: flex; justify-content: space-between;">
+              <span style="color: var(--text-muted);">Subtotal</span>
+              <span style="font-weight: 700;"><%= formatRupiah(order.subtotal) %></span>
+            </div>
+            <% if (order.discount > 0) { %>
+              <div style="display: flex; justify-content: space-between; color: var(--accent-green); font-weight: 700;">
+                <span>Diskon Promo (<%= order.promo_code || 'Voucher' %>)</span>
+                <span>-<%= formatRupiah(order.discount) %></span>
+              </div>
+            <% } %>
+            <div style="display: flex; justify-content: space-between;">
+              <span style="color: var(--text-muted);">Biaya Pengiriman (<%= order.method === 'delivery' ? 'Delivery' : 'Ambil di Toko' %>)</span>
+              <span style="font-weight: 700;"><%= formatRupiah(order.delivery_fee) %></span>
+            </div>
+            <div style="border-top: 1.5px dashed var(--border-color); margin-top: 6px; padding-top: 12px; display: flex; justify-content: space-between; align-items: baseline;">
+              <span style="font-size: 16px; font-weight: 800;">Total Pembayaran</span>
+              <span style="font-size: 22px; font-weight: 800; color: var(--primary);"><%= formatRupiah(order.total) %></span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Customer & Delivery Info -->
+        <div class="card">
+          <h2 style="font-size: 20px; color: var(--text-dark); margin-bottom: 16px; border-bottom: 1px solid var(--border-color); padding-bottom: 12px;">
+            Informasi Pengiriman
+          </h2>
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; font-size: 14px;">
+            <div>
+              <span style="color: var(--text-muted); display: block; font-size: 12px;">Nama Pelanggan</span>
+              <strong><%= order.customer_name %></strong>
+            </div>
+            <div>
+              <span style="color: var(--text-muted); display: block; font-size: 12px;">Nomor Telepon / WA</span>
+              <strong><%= order.customer_phone %></strong>
+            </div>
+            <div>
+              <span style="color: var(--text-muted); display: block; font-size: 12px;">Metode</span>
+              <strong><%= order.method === 'delivery' ? '🚗 Antar ke Alamat (Delivery)' : '🏪 Ambil di Toko (Pickup)' %></strong>
+            </div>
+            <% if (order.method === 'delivery') { %>
+              <div style="grid-column: 1 / -1;">
+                <span style="color: var(--text-muted); display: block; font-size: 12px;">Alamat Pengantaran</span>
+                <strong><%= order.address %></strong>
+              </div>
+            <% } %>
+            <% if (order.notes) { %>
+              <div style="grid-column: 1 / -1;">
+                <span style="color: var(--text-muted); display: block; font-size: 12px;">Catatan Khusus</span>
+                <em><%= order.notes %></em>
+              </div>
+            <% } %>
+          </div>
+        </div>
+
+        <!-- Order Timeline Log -->
+        <div class="card">
+          <h2 style="font-size: 18px; color: var(--text-dark); margin-bottom: 14px;">Riwayat Status Pesanan</h2>
+          <div style="display: flex; flex-direction: column; gap: 12px;">
+            <% for (const h of history) { %>
+              <div style="display: flex; gap: 12px; font-size: 13px; align-items: flex-start;">
+                <div style="color: var(--primary); font-size: 16px; line-height: 1;">●</div>
+                <div>
+                  <div style="font-weight: 700; color: var(--text-dark);">
+                    <%= h.reason || (h.new_value) %>
+                  </div>
+                  <div style="color: var(--text-muted); font-size: 12px;">
+                    <%= formatDate(h.created_at) %> &bull; Oleh: <%= h.actor %>
+                  </div>
+                </div>
+              </div>
+            <% } %>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right Column: QRIS & Payment Proof Upload -->
+      <div>
+        <!-- QRIS Payment Box -->
+        <div class="card" style="text-align: center;">
+          <h2 style="font-size: 20px; color: var(--primary); margin-bottom: 4px;">Instruksi Pembayaran QRIS</h2>
+          <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 16px;">
+            NMID: <strong>ID1026642568079</strong> (Nachoan, Makanan)
+          </p>
+
+          <!-- Amount to pay with copy button -->
+          <div style="background: #FFF3E4; border: 1.5px solid var(--border-color); border-radius: var(--radius-sm); padding: 14px; margin-bottom: 20px;">
+            <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 4px;">Nominal yang Harus Dibayar:</div>
+            <div style="font-size: 26px; font-weight: 800; color: var(--primary); margin-bottom: 8px;">
+              <%= formatRupiah(order.total) %>
+            </div>
+            <button type="button" class="btn btn-outline btn-sm" onclick="copyToClipboard('<%= order.total %>', 'Nominal <%= formatRupiah(order.total) %> berhasil disalin!')">
+              📋 Salin Jumlah
+            </button>
+          </div>
+
+          <!-- QRIS Image -->
+          <div style="max-width: 280px; margin: 0 auto 20px; background: var(--white); padding: 12px; border-radius: var(--radius-md); box-shadow: 0 4px 12px rgba(0,0,0,0.06); border: 1px solid var(--border-color);">
+            <img src="<%= qrisPath %>" alt="QRIS NACHOAN" style="width: 100%; border-radius: 6px;">
+          </div>
+
+          <!-- Payment Steps -->
+          <div style="text-align: left; background: #FAFAFA; border: 1px solid #EEE; padding: 16px; border-radius: var(--radius-sm); font-size: 13px; line-height: 1.6; margin-bottom: 24px;">
+            <strong>Langkah Pembayaran:</strong>
+            <ol style="padding-left: 18px; margin-top: 6px;">
+              <li>Buka aplikasi m-Banking atau e-Wallet (BCA, Mandiri, BRI, GoPay, OVO, ShopeePay, Dana).</li>
+              <li>Pilih menu <strong>Scan / Bayar QRIS</strong>.</li>
+              <li>Arahkan kamera ke kode QRIS di atas.</li>
+              <li>Pastikan nama merchant tertera <strong>Nachoan, Makanan</strong>.</li>
+              <li>Masukkan nominal transfer tepat <strong><%= formatRupiah(order.total) %></strong>.</li>
+              <li>Selesaikan transaksi, simpan bukti struk transfer, dan unggah di form bawah.</li>
+            </ol>
+          </div>
+
+          <!-- Upload / Verification Status Section -->
+          <div style="border-top: 1px solid var(--border-color); padding-top: 20px; text-align: left;">
+            <h3 style="font-size: 17px; margin-bottom: 12px; color: var(--text-dark);">
+              Upload Bukti Transfer
+            </h3>
+
+            <!-- Rejection Alert if latest submission was rejected -->
+            <% const latestSub = submissions.length > 0 ? submissions[0] : null; %>
+            <% if (latestSub && latestSub.status === 'rejected') { %>
+              <div style="background: #fee2e2; border: 1px solid #fca5a5; color: #991b1b; padding: 12px; border-radius: var(--radius-sm); font-size: 13px; margin-bottom: 16px;">
+                <strong>⚠️ Bukti transfer sebelumnya ditolak oleh admin!</strong><br>
+                <em>Alasan: <%= latestSub.reviewer_note || 'Data pembayaran tidak sesuai atau mutasi belum masuk.' %></em><br>
+                Silakan lakukan transfer ulang atau unggah bukti pembayaran yang valid di bawah ini.
+              </div>
+            <% } else if (order.payment_status === 'PAID') { %>
+              <div style="background: #dcfce7; border: 1px solid #86efac; color: #166534; padding: 14px; border-radius: var(--radius-sm); font-size: 14px; font-weight: 700; text-align: center; margin-bottom: 16px;">
+                🎉 Pembayaran Anda telah terverifikasi! Pesanan Anda segera disiapkan.
+              </div>
+            <% } else if (submissions.length > 0 && latestSub.status === 'pending') { %>
+              <div style="background: #fef3c7; border: 1px solid #fde68a; color: #92400e; padding: 14px; border-radius: var(--radius-sm); font-size: 13px; margin-bottom: 16px;">
+                ⏳ <strong>Bukti transfer sedang diverifikasi oleh admin.</strong><br>
+                Proses verifikasi maksimal 1×24 jam. Halaman ini akan terupdate otomatis begitu disetujui.
+              </div>
+            <% } %>
+
+            <!-- Proof Upload Form (Allowed if UNPAID or REJECTED or wants to re-upload) -->
+            <% if (order.payment_status !== 'PAID') { %>
+              <form action="/order/<%= order.access_token %>/upload" method="POST" enctype="multipart/form-data">
+                <div class="form-group">
+                  <label class="form-label" for="payment_proof">
+                    Pilih File Bukti Pembayaran (JPG, PNG, atau PDF max 5MB):
+                  </label>
+                  <input type="file" id="payment_proof" name="payment_proof" class="form-control" accept="image/jpeg,image/png,image/jpg,application/pdf" required>
+                </div>
+                <button type="submit" class="btn btn-primary btn-block" style="padding: 12px;">
+                  📤 Unggah Bukti Pembayaran
+                </button>
+              </form>
+            <% } %>
+
+            <!-- Upload History List -->
+            <% if (submissions.length > 0) { %>
+              <div style="margin-top: 20px;">
+                <div style="font-weight: 700; font-size: 13px; color: var(--text-muted); margin-bottom: 8px;">
+                  Bukti yang Pernah Diunggah:
+                </div>
+                <div style="display: flex; flex-direction: column; gap: 8px;">
+                  <% for (const sub of submissions) { %>
+                    <div style="display: flex; justify-content: space-between; align-items: center; background: #FFF8F0; padding: 8px 12px; border-radius: var(--radius-sm); font-size: 13px; border: 1px solid var(--border-color);">
+                      <div>
+                        <strong>Versi #<%= sub.version %></strong>
+                        <span style="color: var(--text-muted); font-size: 11px; margin-left: 6px;">(<%= formatDate(sub.created_at) %>)</span>
+                      </div>
+                      <div style="display: flex; align-items: center; gap: 8px;">
+                        <span class="badge <%= sub.status === 'approved' ? 'badge-green' : (sub.status === 'rejected' ? 'badge-red' : 'badge-yellow') %>" style="font-size: 11px;">
+                          <%= sub.status === 'approved' ? 'Disetujui' : (sub.status === 'rejected' ? 'Ditolak' : 'Menunggu') %>
+                        </span>
+                        <a href="/order/<%= order.access_token %>/proof/<%= sub.id %>" target="_blank" class="btn btn-outline btn-sm" style="padding: 2px 8px; font-size: 12px;">
+                          Lihat
+                        </a>
+                      </div>
+                    </div>
+                  <% } %>
+                </div>
+              </div>
+            <% } %>
+
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</main>
+
+<style>
+@media (min-width: 900px) {
+  .order-grid {
+    grid-template-columns: 1.2fr 0.8fr !important;
+  }
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  // Start polling status every 6 seconds
+  initOrderPolling('<%= order.access_token %>', '<%= order.order_status %>', '<%= order.payment_status %>');
+});
+</script>
+
+<%- include('partials/footer') %>

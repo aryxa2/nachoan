@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title><%= title %></title>
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="icon" type="image/jpeg" href="/images/logo.jpg">
+</head>
+<body style="background: #1A1412; display: flex; align-items: center; justify-content: center; min-height: 100vh;">
+
+  <div style="width: 100%; max-width: 400px; padding: 20px;">
+    <div style="background: var(--white); border-radius: var(--radius-lg); padding: 36px 28px; box-shadow: 0 10px 30px rgba(0,0,0,0.3);">
+      <div style="text-align: center; margin-bottom: 24px;">
+        <img src="/images/logo.jpg" alt="NACHOAN" style="height: 60px; margin: 0 auto 12px; border-radius: 8px;">
+        <h1 style="font-size: 24px; color: var(--primary);">Login Admin NACHOAN</h1>
+        <p style="font-size: 13px; color: var(--text-muted);">Masukkan akun administrator untuk mengelola toko.</p>
+      </div>
+
+      <% if (typeof error !== 'undefined' && error) { %>
+        <div style="background: #fee2e2; border: 1px solid #fca5a5; color: #991b1b; padding: 10px 14px; border-radius: var(--radius-sm); font-size: 13px; margin-bottom: 18px; font-weight: 600;">
+          <%= error %>
+        </div>
+      <% } %>
+
+      <form action="/admin/login" method="POST">
+        <div class="form-group">
+          <label class="form-label" for="username">Username</label>
+          <input type="text" id="username" name="username" class="form-control" placeholder="admin" required autofocus>
+        </div>
+
+        <div class="form-group" style="margin-bottom: 24px;">
+          <label class="form-label" for="password">Password</label>
+          <input type="password" id="password" name="password" class="form-control" placeholder="••••••••" required>
+        </div>
+
+        <button type="submit" class="btn btn-primary btn-block" style="padding: 12px; font-size: 15px;">
+          Masuk ke Dashboard &rsaquo;
+        </button>
+      </form>
+
+      <div style="margin-top: 24px; text-align: center;">
+        <a href="/" style="font-size: 13px; color: var(--text-muted);">&lsaquo; Kembali ke Website Pelanggan</a>
+      </div>
+    </div>
+  </div>
+
+</body>
+</html>

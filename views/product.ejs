@@ -1,0 +1,134 @@
+<%- include('partials/header') %>
+
+<main class="section">
+  <div class="container">
+    <div style="margin-bottom: 20px;">
+      <a href="/menu" style="font-weight: 700; color: var(--primary); display: inline-flex; align-items: center; gap: 6px;">
+        &lsaquo; Kembali ke Menu
+      </a>
+    </div>
+
+    <div class="card" style="display: grid; grid-template-columns: 1fr; gap: 32px; padding: 32px;">
+      <div style="display: grid; grid-template-columns: 1fr; gap: 32px;" class="detail-grid">
+        <!-- Image -->
+        <div style="background: #FFF8F0; border-radius: var(--radius-md); overflow: hidden; max-height: 400px; display: flex; align-items: center; justify-content: center; border: 1px solid var(--border-color);">
+          <img src="<%= product.image %>" alt="<%= product.name %>" style="max-height: 100%; object-fit: contain;">
+        </div>
+
+        <!-- Info & Options -->
+        <div style="display: flex; flex-direction: column;">
+          <h1 style="font-size: 32px; color: var(--text-dark); margin-bottom: 8px;"><%= product.name %></h1>
+          <div style="font-size: 26px; font-weight: 800; color: var(--primary); margin-bottom: 16px;">
+            <%= formatRupiah(product.price) %>
+          </div>
+          <p style="color: var(--text-muted); font-size: 15px; line-height: 1.6; margin-bottom: 24px;">
+            <%= product.description %>
+          </p>
+
+          <form id="add-to-cart-form">
+            <!-- Spicy Level Selection (if available) -->
+            <% if (spicyLevels && spicyLevels.length > 0) { %>
+              <div style="margin-bottom: 24px; background: #FFF3E4; padding: 16px; border-radius: var(--radius-sm); border: 1px solid var(--border-color);">
+                <label class="form-label" style="font-size: 15px; margin-bottom: 10px;">
+                  🌶️ Pilih Level Pedas:
+                </label>
+                <div style="display: flex; flex-wrap: wrap; gap: 10px;">
+                  <% spicyLevels.forEach((lvl, idx) => { %>
+                    <label style="display: flex; align-items: center; gap: 8px; background: var(--white); padding: 8px 16px; border-radius: var(--radius-full); border: 1.5px solid var(--border-color); cursor: pointer; font-weight: 700; font-size: 14px;">
+                      <input type="radio" name="variant" value="<%= lvl %>" <%= idx === 0 ? 'checked' : '' %>>
+                      <%= lvl %>
+                    </label>
+                  <% }); %>
+                </div>
+              </div>
+            <% } %>
+
+            <!-- Quantity Stepper -->
+            <div style="margin-bottom: 24px;">
+              <label class="form-label">Jumlah:</label>
+              <div style="display: inline-flex; align-items: center; border: 1.5px solid var(--border-color); border-radius: var(--radius-full); background: var(--white); overflow: hidden;">
+                <button type="button" id="btn-minus" style="width: 40px; height: 40px; border: none; background: none; font-size: 20px; font-weight: bold; cursor: pointer;">-</button>
+                <input type="number" id="qty-input" value="1" min="1" max="50" style="width: 50px; text-align: center; border: none; font-weight: 700; font-size: 16px;" readonly>
+                <button type="button" id="btn-plus" style="width: 40px; height: 40px; border: none; background: none; font-size: 20px; font-weight: bold; cursor: pointer;">+</button>
+              </div>
+            </div>
+
+            <!-- Submit Button -->
+            <button type="submit" class="btn btn-primary" style="padding: 14px 32px; font-size: 16px; width: 100%; max-width: 320px;">
+              🛒 Tambah ke Keranjang
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- Related Products -->
+    <% if (related && related.length > 0) { %>
+      <div style="margin-top: 48px;">
+        <h3 style="font-size: 22px; margin-bottom: 18px;">Rekomendasi Lainnya</h3>
+        <div class="product-grid">
+          <% for (const r of related) { %>
+            <div class="product-card">
+              <a href="/product/<%= r.slug %>" class="product-thumb">
+                <img src="<%= r.image %>" alt="<%= r.name %>" loading="lazy">
+              </a>
+              <div class="product-info">
+                <h4 class="product-name"><a href="/product/<%= r.slug %>"><%= r.name %></a></h4>
+                <div class="product-footer">
+                  <span class="product-price"><%= formatRupiah(r.price) %></span>
+                  <a href="/product/<%= r.slug %>" class="btn btn-primary btn-sm">Lihat</a>
+                </div>
+              </div>
+            </div>
+          <% } %>
+        </div>
+      </div>
+    <% } %>
+  </div>
+</main>
+
+<style>
+@media (min-width: 768px) {
+  .detail-grid {
+    grid-template-columns: 1fr 1fr !important;
+  }
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  const qtyInput = document.getElementById('qty-input');
+  const btnMinus = document.getElementById('btn-minus');
+  const btnPlus = document.getElementById('btn-plus');
+  const form = document.getElementById('add-to-cart-form');
+
+  btnMinus.addEventListener('click', () => {
+    let val = parseInt(qtyInput.value, 10);
+    if (val > 1) qtyInput.value = val - 1;
+  });
+
+  btnPlus.addEventListener('click', () => {
+    let val = parseInt(qtyInput.value, 10);
+    qtyInput.value = val + 1;
+  });
+
+  form.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const variantEl = document.querySelector('input[name="variant"]:checked');
+    const variant = variantEl ? variantEl.value : null;
+    const qty = parseInt(qtyInput.value, 10) || 1;
+
+    Cart.add({
+      id: <%= product.id %>,
+      type: 'product',
+      name: '<%= product.name %>',
+      price: <%= product.price %>,
+      quantity: qty,
+      variant: variant,
+      image: '<%= product.image %>'
+    });
+  });
+});
+</script>
+
+<%- include('partials/footer') %>

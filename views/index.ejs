@@ -1,0 +1,242 @@
+<%- include('partials/header') %>
+
+<!-- Hero Section -->
+<section class="hero-section">
+  <div class="container">
+    <div class="hero-grid">
+      <div class="hero-content">
+        <span class="hero-tag">🔥 Camilan Nachos Cone No. 1</span>
+        <h1 class="hero-title">
+          GOOD FOOD.<br>
+          GOOD MOOD.<br>
+          <span>EXTRA CRUNCH.</span>
+        </h1>
+        <p class="hero-desc">
+          Your favorite nacho moment starts here. Nikmati kelezatan <strong>Beefy Nacho</strong> dan <strong>Cheezy Corn</strong> dalam kemasan cone praktis anti-ribet!
+        </p>
+        <div class="hero-buttons">
+          <a href="/menu" class="btn btn-primary" style="font-size: 16px; padding: 14px 28px;">
+            ORDER NOW &rsaquo;
+          </a>
+          <a href="/menu" class="btn btn-outline" style="font-size: 16px; padding: 14px 28px;">
+            EXPLORE MENU
+          </a>
+        </div>
+      </div>
+      <div class="hero-visual">
+        <% if (typeof heroSlides !== 'undefined' && heroSlides && heroSlides.length > 0) { %>
+          <div class="hero-carousel" id="heroCarousel">
+            <div class="hero-carousel-track-wrapper">
+              <div class="hero-carousel-track" id="heroTrack">
+                <% heroSlides.forEach((slide, index) => { %>
+                  <div class="hero-carousel-slide">
+                    <img src="<%= slide.image_url %>" alt="<%= slide.title || 'NACHOAN' %>" class="hero-cone-img" style="border-radius: 24px; max-height: 440px;">
+                    <% if (slide.title || slide.caption) { %>
+                      <div class="hero-carousel-caption">
+                        <% if (slide.title) { %><h4><%= slide.title %></h4><% } %>
+                        <% if (slide.caption) { %><p><%= slide.caption %></p><% } %>
+                      </div>
+                    <% } %>
+                  </div>
+                <% }); %>
+              </div>
+            </div>
+
+            <% if (heroSlides.length > 1) { %>
+              <button type="button" class="hero-carousel-btn prev" id="heroPrevBtn" aria-label="Slide Sebelumnya">&#10094;</button>
+              <button type="button" class="hero-carousel-btn next" id="heroNextBtn" aria-label="Slide Selanjutnya">&#10095;</button>
+
+              <div class="hero-carousel-dots" id="heroDots">
+                <% heroSlides.forEach((slide, index) => { %>
+                  <button type="button" class="hero-carousel-dot <%= index === 0 ? 'active' : '' %>" data-index="<%= index %>" aria-label="Slide <%= index + 1 %>"></button>
+                <% }); %>
+              </div>
+            <% } %>
+          </div>
+        <% } else { %>
+          <img src="/images/products/beefy-nacho.jpg" alt="NACHOAN Cone Beefy Nacho" class="hero-cone-img" style="border-radius: 24px; max-height: 440px; box-shadow: 0 15px 30px rgba(193, 18, 31, 0.2);">
+        <% } %>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<!-- Best Seller Section -->
+<section class="section">
+  <div class="container">
+    <div class="section-header">
+      <div>
+        <h2 class="section-title">BEST SELLER 🔥</h2>
+        <p class="section-subtitle">Menu favorit kami: Beefy Nacho & Cheezy Corn</p>
+      </div>
+      <a href="/menu" class="view-all-link">Lihat Menu &rsaquo;</a>
+    </div>
+
+    <div class="product-grid" style="grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); max-width: 800px; margin: 0 auto;">
+      <% for (const product of bestSellers) { %>
+        <div class="product-card">
+          <span class="badge badge-red card-badge">MENU UTAMA</span>
+          <a href="/product/<%= product.slug %>" class="product-thumb">
+            <img src="<%= product.image %>" alt="<%= product.name %>" loading="lazy">
+          </a>
+          <div class="product-info">
+            <h3 class="product-name">
+              <a href="/product/<%= product.slug %>"><%= product.name %></a>
+            </h3>
+            <p class="product-desc"><%= product.description %></p>
+            <div class="product-footer">
+              <div class="product-price"><%= formatRupiah(product.price) %></div>
+              <button type="button" class="btn btn-primary btn-sm" onclick="Cart.add({ id: <%= product.id %>, type: 'product', name: '<%= product.name %>', price: <%= product.price %>, quantity: 1, image: '<%= product.image %>' })">
+                + Pesan
+              </button>
+            </div>
+          </div>
+        </div>
+      <% } %>
+    </div>
+  </div>
+</section>
+
+<!-- Combo Coming Soon Banner -->
+<section class="section" style="padding-top: 0;">
+  <div class="container">
+    <div class="promo-banner" style="background: linear-gradient(135deg, #1A1412 0%, #2B2118 100%);">
+      <div>
+        <span class="badge badge-yellow" style="margin-bottom: 12px;">COMING SOON</span>
+        <h2 style="color: var(--secondary);">COMBO THAT HITS.</h2>
+        <p>Paket combo hemat lengkap dengan minuman dan cemilan pendamping segera hadir untuk temani momen ngemil seru kamu!</p>
+        <span style="display: inline-block; background: rgba(255,255,255,0.1); padding: 8px 18px; border-radius: 9999px; font-size: 13px; font-weight: 700; color: #FFF;">
+          ⏳ Segera Hadir di NACHOAN
+        </span>
+      </div>
+      <div style="text-align: center;">
+        <img src="/images/products/cheezy-corn.jpg" alt="Cheezy Corn" class="promo-thumb" style="border-radius: 18px; max-height: 220px;">
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Inovasi Kemasan Cone Feature Banner -->
+<section class="section" style="background: var(--white); border-top: 1px solid var(--border-color); border-bottom: 1px solid var(--border-color);">
+  <div class="container">
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 28px; align-items: center;">
+      <div style="text-align: center;">
+        <img src="/images/products/cheezy-corn.jpg" alt="Kemasan Cone NACHOAN" style="max-height: 280px; margin: 0 auto; border-radius: 18px; box-shadow: 0 10px 20px rgba(0,0,0,0.1);">
+      </div>
+      <div>
+        <span class="badge badge-red" style="margin-bottom: 10px;">DESIGN INOVATIF</span>
+        <h2 style="font-size: 28px; color: var(--primary); margin-bottom: 12px;">Kemasan Cone Anti-Tumpah</h2>
+        <p style="color: var(--text-muted); font-size: 15px; margin-bottom: 18px; line-height: 1.6;">
+          Didesain khusus berbentuk cone ergonomis. Praktis digenggam satu tangan, saus dan keju merata hingga dasar cone, dan tetap rapi saat dinikmati di jalan, mobil, maupun meja kerja!
+        </p>
+        <a href="/about#kemasan" class="btn btn-outline btn-sm">Pelajari Desain Kemasan &rsaquo;</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<script>
+  (function() {
+    const carousel = document.getElementById('heroCarousel');
+    const track = document.getElementById('heroTrack');
+    if (!carousel || !track) return;
+
+    const slides = track.querySelectorAll('.hero-carousel-slide');
+    const prevBtn = document.getElementById('heroPrevBtn');
+    const nextBtn = document.getElementById('heroNextBtn');
+    const dots = document.querySelectorAll('.hero-carousel-dot');
+    const totalSlides = slides.length;
+    if (totalSlides <= 1) return;
+
+    let currentIndex = 0;
+    let timer = null;
+
+    function goToSlide(index) {
+      if (index < 0) {
+        currentIndex = totalSlides - 1;
+      } else if (index >= totalSlides) {
+        currentIndex = 0;
+      } else {
+        currentIndex = index;
+      }
+
+      track.style.transform = `translateX(-${currentIndex * 100}%)`;
+
+      dots.forEach((dot, idx) => {
+        if (idx === currentIndex) {
+          dot.classList.add('active');
+        } else {
+          dot.classList.remove('active');
+        }
+      });
+    }
+
+    function nextSlide() {
+      goToSlide(currentIndex + 1);
+    }
+
+    function prevSlide() {
+      goToSlide(currentIndex - 1);
+    }
+
+    function startAutoSlide() {
+      stopAutoSlide();
+      timer = setInterval(nextSlide, 4500);
+    }
+
+    function stopAutoSlide() {
+      if (timer) {
+        clearInterval(timer);
+        timer = null;
+      }
+    }
+
+    if (prevBtn) {
+      prevBtn.addEventListener('click', () => {
+        prevSlide();
+        startAutoSlide();
+      });
+    }
+
+    if (nextBtn) {
+      nextBtn.addEventListener('click', () => {
+        nextSlide();
+        startAutoSlide();
+      });
+    }
+
+    dots.forEach((dot) => {
+      dot.addEventListener('click', () => {
+        const targetIdx = parseInt(dot.getAttribute('data-index'), 10);
+        goToSlide(targetIdx);
+        startAutoSlide();
+      });
+    });
+
+    carousel.addEventListener('mouseenter', stopAutoSlide);
+    carousel.addEventListener('mouseleave', startAutoSlide);
+
+    // Touch swipe support
+    let startX = 0;
+    let endX = 0;
+    carousel.addEventListener('touchstart', (e) => {
+      startX = e.changedTouches[0].screenX;
+      stopAutoSlide();
+    }, { passive: true });
+
+    carousel.addEventListener('touchend', (e) => {
+      endX = e.changedTouches[0].screenX;
+      if (startX - endX > 40) {
+        nextSlide();
+      } else if (endX - startX > 40) {
+        prevSlide();
+      }
+      startAutoSlide();
+    }, { passive: true });
+
+    startAutoSlide();
+  })();
+</script>
+
+<%- include('partials/footer') %>
