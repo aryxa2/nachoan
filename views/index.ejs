@@ -29,7 +29,7 @@
               <div class="hero-carousel-track" id="heroTrack">
                 <% heroSlides.forEach((slide, index) => { %>
                   <div class="hero-carousel-slide">
-                    <img src="<%= slide.image_url %>" alt="<%= slide.title || 'NACHOAN' %>" class="hero-cone-img" style="border-radius: 24px; max-height: 440px;">
+                    <img src="<%= slide.image_url %>" alt="<%= slide.title || 'NACHOAN' %>">
                     <% if (slide.title || slide.caption) { %>
                       <div class="hero-carousel-caption">
                         <% if (slide.title) { %><h4><%= slide.title %></h4><% } %>
