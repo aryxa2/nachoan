@@ -66,9 +66,8 @@
                               </div>
 
                               <div class="form-group">
-                                <label class="form-label">Alamat Lengkap Outlet (Untuk Pickup)</label>
-                                <textarea name="address" class="form-control"
-                                  required><%= settings.address || 'Jl. Contoh No. 123, Kota' %></textarea>
+                                <label class="form-label">Lokasi Pick Up Point (Opsional)</label>
+                                <textarea name="address" class="form-control"><%= settings.address || '' %></textarea>
                               </div>
 
                               <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
@@ -80,14 +79,14 @@
                                 <div class="form-group">
                                   <label class="form-label">Instagram</label>
                                   <input type="text" name="instagram" class="form-control"
-                                    value="<%= settings.instagram || '@nachoan.id' %>">
+                                    value="<%= settings.instagram || '@nachoan_' %>">
                                 </div>
                               </div>
 
                               <div class="form-group">
-                                <label class="form-label">Jam Operasional</label>
+                                <label class="form-label">Jadwal PO / Operasional</label>
                                 <input type="text" name="hours" class="form-control"
-                                  value="<%= settings.hours || 'Senin - Minggu, 10:00 - 22:00' %>" required>
+                                  value="<%= settings.hours || 'PO Batch 1 (23-27 Nov) | Next Batch & Expo Coming Soon' %>" required>
                               </div>
 
                               <div class="form-group">

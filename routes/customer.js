@@ -48,7 +48,7 @@ router.get('/', (req, res) => {
   const heroSlides = db.prepare('SELECT * FROM hero_slides WHERE active = 1 ORDER BY sort_order ASC, id ASC').all();
 
   res.render('index', {
-    title: 'NACHOAN - Good Food. Good Mood. Extra Crunch.',
+    title: 'NACHOAN - Your Crunch, Your Way.',
     bestSellers,
     bundles,
     promos,
@@ -64,7 +64,7 @@ router.get('/menu', (req, res) => {
   const bundles = db.prepare('SELECT * FROM bundles WHERE available = 1 AND archived = 0 ORDER BY id ASC').all();
 
   res.render('menu', {
-    title: 'Menu NACHOAN - Nachos, Snacks & Combos',
+    title: 'Menu NACHOAN - Pizza Cone Tortilla & Combos',
     categories,
     products,
     bundles
@@ -132,10 +132,10 @@ router.get('/bundling', (req, res) => {
   res.redirect('/menu#bundling');
 });
 
-// About Us & Cone Packaging
+// About Us & Packaging
 router.get('/about', (req, res) => {
   res.render('about', {
-    title: 'Tentang NACHOAN - Kemasan Cone & Cerita Kami'
+    title: 'Tentang NACHOAN - Kemasan & Cerita Kami'
   });
 });
 

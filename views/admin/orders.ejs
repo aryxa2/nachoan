@@ -266,7 +266,7 @@
       <div class="form-group">
         <label class="form-label">Metode Pengambilan</label>
         <select id="man-method" class="form-control" onchange="toggleManualAddress()">
-          <option value="pickup">Ambil di Toko (Pickup - Rp0)</option>
+          <option value="pickup">Ambil di Pick Up Point (Pickup - Rp0)</option>
           <option value="delivery">Delivery (Diluar Telkom - Rp2.000)</option>
         </select>
       </div>
@@ -278,7 +278,7 @@
 
       <!-- Menu Selection -->
       <div class="form-group">
-        <label class="form-label">Pilihan Menu Nachos:</label>
+        <label class="form-label">Pilihan Menu:</label>
         <div style="display: flex; flex-direction: column; gap: 8px;">
           <% if (typeof activeProducts !== 'undefined' && activeProducts.length > 0) { %>
             <% for (const p of activeProducts) { %>

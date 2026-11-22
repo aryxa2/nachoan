@@ -29,8 +29,8 @@ function seed() {
 
   // --- Products ---
   const products = [
-    { id: 1, category_id: 1, name: 'Beefy Nacho', slug: 'beefy-nacho', description: 'Nachos renyah cone dengan limpahan saus keju gurih dan daging sapi bumbu cincang spesial.', price: 25000, image: '/images/products/beefy-nacho.jpg', spicy_levels: null, available: 1, archived: 0 },
-    { id: 2, category_id: 1, name: 'Cheezy Corn', slug: 'cheezy-corn', description: 'Perpaduan renyah cone nacho, jagung manis segar pilihan, dan lelehan keju lumer yang gurih nikmat.', price: 22000, image: '/images/products/cheezy-corn.jpg', spicy_levels: null, available: 1, archived: 0 },
+    { id: 1, category_id: 1, name: 'Beefy Nacho', slug: 'beefy-nacho', description: 'Perpaduan tortilla cone yang renyah dengan limpahan saus bolognese dan daging cincang spesial bertopping keju.', price: 25000, image: '/images/products/beefy-nacho.jpg', spicy_levels: null, available: 1, archived: 0 },
+    { id: 2, category_id: 1, name: 'Cheezy Corn', slug: 'cheezy-corn', description: 'Perpaduan renyahnya cone tortilla dengan jagung manis segar pilihan serta lelehan keju lumer yang gurih dan nikmat.', price: 22000, image: '/images/products/cheezy-corn.jpg', spicy_levels: null, available: 1, archived: 0 },
     { id: 3, category_id: 1, name: 'Spicy Beef Nachos', slug: 'spicy-beef-nachos', description: 'Nachos dengan daging sapi pedas', price: 27000, image: '/images/products/spicy-beef-nachos.jpg', spicy_levels: null, available: 0, archived: 1 },
     { id: 4, category_id: 1, name: 'Chicken Nachos', slug: 'chicken-nachos', description: 'Nachos dengan ayam crispy', price: 26000, image: '/images/products/chicken-nachos.jpg', spicy_levels: null, available: 0, archived: 1 },
     { id: 5, category_id: 2, name: 'Cheese Dip', slug: 'cheese-dip', description: 'Saus keju premium untuk celupan', price: 8000, image: '/images/products/cheese-dip.jpg', spicy_levels: null, available: 0, archived: 1 },
@@ -118,10 +118,10 @@ function seed() {
   // --- Store Settings ---
   const settings = {
     store_name: 'NACHOAN',
-    address: 'Jl. Contoh No. 123, Kota',
+    address: '',
     phone: '+6281234567890',
-    hours: 'Senin - Minggu, 10:00 - 22:00',
-    instagram: '@nachoan.id',
+    hours: 'PO Batch 1 (23-27 Nov) | Next Batch & Expo Coming Soon',
+    instagram: '@nachoan_',
     demo_mode: 'true',
   };
   const insertSetting = db.prepare(`INSERT OR REPLACE INTO store_settings (key, value) VALUES (?, ?)`);
@@ -168,7 +168,7 @@ function seed() {
     },
     {
       id: 3,
-      title: 'Inovasi Cone Anti-Tumpah',
+      title: 'Inovasi Kemasan Anti-Tumpah',
       caption: 'Praktis dan seru dinikmati di mana saja tanpa ribet!',
       image_url: '/images/cone.jpg',
       link_url: '/menu',

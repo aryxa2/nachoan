@@ -3,8 +3,8 @@
   <div style="background: #FFE8D6; padding: 24px 0; border-bottom: 1px solid var(--border-color);">
     <div class="container" style="text-align: center;">
       <h1 style="font-size: 32px; color: var(--primary); margin-bottom: 6px;">Menu Pilihan NACHOAN</h1>
-      <p style="color: var(--text-muted); font-size: 15px;">Nikmati kerenyahan cone nacho khas NACHOAN dengan bahan
-        berkualitas!</p>
+      <p style="color: var(--text-muted); font-size: 15px;">Nikmati kerenyahan pizza cone tortilla khas NACHOAN dengan
+        bahan berkualitas!</p>
     </div>
   </div>
 
@@ -13,18 +13,18 @@
       <!-- Category Filter Tabs -->
       <div
         style="display: flex; gap: 10px; overflow-x: auto; padding-bottom: 16px; margin-bottom: 24px; scrollbar-width: none;"
-        id="category-tabs">
-        <button type="button" class="btn btn-primary btn-sm cat-btn active" data-cat="all">Semua Menu</button>
-        <button type="button" class="btn btn-outline btn-sm cat-btn" data-cat="nachos">Nachos</button>
-        <button type="button" class="btn btn-outline btn-sm cat-btn" data-cat="bundling">Bundling</button>
-        <button type="button" class="btn btn-outline btn-sm cat-btn" data-cat="drinks">Minuman</button>
+        id="category-tabs" role="tablist" aria-label="Filter Kategori Menu">
+        <button type="button" class="btn btn-primary btn-sm cat-btn active" data-cat="all" role="tab" aria-selected="true">Semua Menu</button>
+        <button type="button" class="btn btn-outline btn-sm cat-btn" data-cat="nachos" role="tab" aria-selected="false">Nachoan Series</button>
+        <button type="button" class="btn btn-outline btn-sm cat-btn" data-cat="bundling" role="tab" aria-selected="false">Bundling</button>
+        <button type="button" class="btn btn-outline btn-sm cat-btn" data-cat="drinks" role="tab" aria-selected="false">Minuman</button>
       </div>
 
-      <!-- Nachos Category -->
+      <!-- Nachoan Series Category -->
       <div class="cat-section" id="cat-nachos" style="margin-bottom: 40px;">
         <h2
           style="font-size: 24px; color: var(--text-dark); margin-bottom: 16px; display: flex; align-items: center; gap: 8px;">
-          🌮 Nachos Cone Series
+          Nachoan Series
         </h2>
         <div class="product-grid" style="grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));">
           <% const activeNachos=products.filter(x=> x.category_id === 1 && x.available === 1 && !x.archived); %>
@@ -75,7 +75,7 @@
           <span class="badge badge-yellow" style="font-size: 13px; margin-bottom: 10px;">COMING SOON</span>
           <h3 style="font-size: 22px; color: var(--text-dark); margin-bottom: 8px;">Paket Bundling Segera Hadir!</h3>
           <p style="color: var(--text-muted); font-size: 14px; max-width: 450px; margin: 0 auto;">
-            Kami sedang menyiapkan paket combo hemat khusus dengan paduan nachos favorit dan minuman pelengkap untuk
+            Kami sedang menyiapkan paket combo hemat khusus dengan paduan pizza cone favorit dan minuman pelengkap untuk
             Anda. Nantikan peluncurannya!
           </p>
         </div>
@@ -94,7 +94,7 @@
           <h3 style="font-size: 22px; color: var(--text-dark); margin-bottom: 8px;">Menu Minuman Segera Hadir!</h3>
           <p style="color: var(--text-muted); font-size: 14px; max-width: 450px; margin: 0 auto;">
             Menu minuman dingin yang segar pelepas dahaga sedang dalam proses persiapan dan akan segera hadir menemani
-            nacho cone kamu!
+            pizza cone kamu!
           </p>
         </div>
       </div>
@@ -106,40 +106,66 @@
     document.addEventListener('DOMContentLoaded', () => {
       const tabs = document.querySelectorAll('.cat-btn');
       const sections = document.querySelectorAll('.cat-section');
+      const validCats = new Set(['all', 'nachos', 'bundling', 'drinks']);
+
+      function syncNavActive(cat) {
+        const isBundling = cat === 'bundling';
+        document.querySelectorAll('[data-nav="menu"]').forEach(el => el.classList.toggle('active', !isBundling));
+        document.querySelectorAll('[data-nav="bundling"]').forEach(el => el.classList.toggle('active', isBundling));
+      }
 
       function filterCat(cat) {
+        const target = validCats.has(cat) ? cat : 'all';
         tabs.forEach(t => {
-          if (t.dataset.cat === cat) {
-            t.className = 'btn btn-primary btn-sm cat-btn active';
-          } else {
-            t.className = 'btn btn-outline btn-sm cat-btn';
-          }
+          const isActive = t.dataset.cat === target;
+          t.className = isActive ? 'btn btn-primary btn-sm cat-btn active' : 'btn btn-outline btn-sm cat-btn';
+          t.setAttribute('aria-selected', isActive ? 'true' : 'false');
         });
 
         sections.forEach(sec => {
-          if (cat === 'all') {
-            sec.style.display = 'block';
-          } else {
-            sec.style.display = sec.id === 'cat-' + cat ? 'block' : 'none';
-          }
+          sec.style.display = (target === 'all' || sec.id === 'cat-' + target) ? 'block' : 'none';
         });
+
+        syncNavActive(target);
+      }
+
+      function applyHash() {
+        const hashCat = window.location.hash.replace('#', '');
+        filterCat(hashCat || 'all');
       }
 
       tabs.forEach(t => {
         t.addEventListener('click', () => {
           filterCat(t.dataset.cat);
           if (t.dataset.cat !== 'all') {
-            window.location.hash = t.dataset.cat;
+            history.replaceState(null, '', '#' + t.dataset.cat);
           } else {
-            history.replaceState(null, null, ' ');
+            history.replaceState(null, '', window.location.pathname);
           }
         });
       });
 
-      if (window.location.hash) {
-        const hashCat = window.location.hash.replace('#', '');
-        filterCat(hashCat);
-      }
+      window.addEventListener('hashchange', applyHash);
+
+      document.querySelectorAll('a[href="/menu#bundling"]').forEach(link => {
+        link.addEventListener('click', (e) => {
+          e.preventDefault();
+          history.replaceState(null, '', '#bundling');
+          filterCat('bundling');
+          document.getElementById('cat-bundling')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        });
+      });
+
+      document.querySelectorAll('a[href="/menu"]').forEach(link => {
+        link.addEventListener('click', (e) => {
+          e.preventDefault();
+          history.replaceState(null, '', '/menu');
+          filterCat('all');
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        });
+      });
+
+      applyHash();
     });
   </script>
 

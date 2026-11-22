@@ -8,8 +8,25 @@ document.addEventListener('DOMContentLoaded', () => {
   const mobileMenu = document.getElementById('mobile-menu');
 
   if (toggleBtn && mobileMenu) {
+    const closeMenu = () => {
+      mobileMenu.classList.remove('open');
+      toggleBtn.setAttribute('aria-expanded', 'false');
+    };
+
     toggleBtn.addEventListener('click', () => {
-      mobileMenu.classList.toggle('open');
+      const isOpen = mobileMenu.classList.toggle('open');
+      toggleBtn.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+    });
+
+    mobileMenu.querySelectorAll('a').forEach(link => {
+      link.addEventListener('click', closeMenu);
+    });
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && mobileMenu.classList.contains('open')) {
+        closeMenu();
+        toggleBtn.focus();
+      }
     });
   }
 });

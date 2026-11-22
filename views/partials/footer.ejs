@@ -14,8 +14,8 @@
     <div class="footer-grid">
       <div class="footer-col">
         <img src="/images/logo.jpg" alt="NACHOAN" style="height: 50px; border-radius: 8px; margin-bottom: 16px;">
-        <p style="font-size: 14px; line-height: 1.6; color: #BBB;">
-          <strong>NACHOAN</strong> - Brand camilan nachos kekinian dengan kemasan cone praktis, topping melimpah, dan sensasi extra crunch!
+        <p style="font-size: 14px; line-height: 1.6; color: #D1D5DB;">
+          <strong>NACHOAN</strong> - Brand pizza cone tortilla kekinian dengan kemasan praktis, topping melimpah, dan sensasi extra crunch!
         </p>
       </div>
 
@@ -23,7 +23,7 @@
         <h4>Menu & Bundling</h4>
         <ul>
           <li><a href="/menu">Semua Menu</a></li>
-          <li><a href="/menu#nachos">Nachos Cone Series</a></li>
+          <li><a href="/menu#nachos">Nachoan Series</a></li>
           <li><a href="/menu#bundling">Paket Bundling & Combo</a></li>
         </ul>
       </div>
@@ -32,35 +32,40 @@
         <h4>Tentang Kami</h4>
         <ul>
           <li><a href="/about">Cerita NACHOAN</a></li>
-          <li><a href="/about#kemasan">Inovasi Kemasan Cone</a></li>
+          <li><a href="/about#kemasan">Inovasi Kemasan</a></li>
           <li><a href="/about#faq">Pertanyaan Umum (FAQ)</a></li>
-          <li><a href="/admin/login" style="opacity: 0.5;">Akses Admin</a></li>
+          <li><a href="/admin/login" style="opacity: 0.7;">Akses Admin</a></li>
         </ul>
       </div>
 
       <div class="footer-col">
-        <h4>Kontak & Outlet</h4>
-        <p style="font-size: 14px; margin-bottom: 8px;">
-          📍 <%= typeof settings !== 'undefined' && settings.address ? settings.address : 'Jl. Contoh No. 123, Kota' %>
-        </p>
-        <% 
+        <h4>Kontak</h4>
+        <%
+          const rawIg = typeof settings !== 'undefined' && settings.instagram ? settings.instagram : '@nachoan_';
+          const igHandle = rawIg.replace(/^@/, '');
           const rawPhone = typeof settings !== 'undefined' && settings.phone ? settings.phone : '+6281234567890';
           const cleanPhone = rawPhone.replace(/[^0-9]/g, '');
           const waNumber = cleanPhone.startsWith('0') ? '62' + cleanPhone.slice(1) : (cleanPhone.startsWith('62') ? cleanPhone : '6281234567890');
           const waMessage = encodeURIComponent('hallo saya ingin bertanya mengenai produk Nachoan');
         %>
         <p style="font-size: 14px; margin-bottom: 8px;">
-          📱 WhatsApp: <a href="https://wa.me/<%= waNumber %>?text=<%= waMessage %>" target="_blank" rel="noopener noreferrer" style="color: #FFF; text-decoration: underline; font-weight: 600;"><%= rawPhone %></a>
+          Instagram: <a href="https://instagram.com/<%= igHandle %>" target="_blank" rel="noopener noreferrer" style="color: #FFF; text-decoration: underline; font-weight: 600;">@<%= igHandle %></a>
         </p>
-        <p style="font-size: 14px; margin-bottom: 8px;">
-          🕒 <%= typeof settings !== 'undefined' && settings.hours ? settings.hours : 'Setiap Hari 10:00 - 22:00' %>
+        <p style="font-size: 14px; margin-bottom: 12px;">
+          WhatsApp: <a href="https://wa.me/<%= waNumber %>?text=<%= waMessage %>" target="_blank" rel="noopener noreferrer" style="color: #FFF; text-decoration: underline; font-weight: 600;"><%= rawPhone %></a>
+        </p>
+        <p style="font-size: 14px; margin-bottom: 6px; color: #FDE68A; font-weight: 700;">
+          PO Batch 1 (23-27 Nov)
+        </p>
+        <p style="font-size: 13px; color: #D1D5DB;">
+          Next Batch & Expo Coming Soon
         </p>
       </div>
     </div>
 
     <div class="footer-bottom">
       <div>&copy; 2026 NACHOAN. Hak Cipta Dilindungi.</div>
-      <div>Good Food. Good Mood. Extra Crunch.</div>
+      <div>Your Crunch, Your Way.</div>
     </div>
   </div>
 </footer>

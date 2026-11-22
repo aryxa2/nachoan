@@ -25,7 +25,7 @@ assert.strictEqual(JSON.parse(updatedP.spicy_levels).length, 4);
 // Revert back
 db.prepare(`
   UPDATE products 
-  SET name = 'Beefy Nacho', slug = 'beefy-nacho', price = 25000, description = 'Nachos renyah cone dengan limpahan saus keju gurih dan daging sapi bumbu cincang spesial.', spicy_levels = null
+  SET name = 'Beefy Nacho', slug = 'beefy-nacho', price = 25000, description = 'Perpaduan tortilla cone yang renyah dengan limpahan saus bolognese dan daging cincang spesial bertopping keju.', spicy_levels = null
   WHERE id = 1
 `).run();
 console.log('✔ Product Edit successfully tested.');
