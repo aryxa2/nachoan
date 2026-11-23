@@ -83,9 +83,12 @@ router.post('/login', (req, res) => {
 
 // Admin Logout
 router.get('/logout', (req, res) => {
-  req.session.destroy(() => {
+  if (req.session && typeof req.session.destroy === 'function') {
+    req.session.destroy(() => res.redirect('/admin/login'));
+  } else {
+    req.session = null;
     res.redirect('/admin/login');
-  });
+  }
 });
 
 // Apply auth to all subsequent routes

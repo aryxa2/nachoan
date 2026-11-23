@@ -62,7 +62,7 @@ async function testCarouselFlow() {
     { 'Content-Type': 'application/x-www-form-urlencoded' }
   );
   assert.strictEqual(loginRes.statusCode, 302);
-  const sessionCookie = loginRes.headers['set-cookie'][0].split(';')[0];
+  const sessionCookie = loginRes.headers['set-cookie'].map(c => c.split(';')[0]).join('; ');
   console.log('✔ Admin logged in.');
 
   // 3. GET /admin/carousel

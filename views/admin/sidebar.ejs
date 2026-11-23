@@ -8,7 +8,7 @@
   </div>
 
   <nav class="admin-nav">
-    <a href="/admin" class="admin-nav-item <%= path === '/admin' ? 'active' : '' %>">
+    <a href="/admin" class="admin-nav-item <%= (path === '/admin' || path === '/admin/') ? 'active' : '' %>">
       📊 Dashboard
     </a>
     <a href="/admin/orders" class="admin-nav-item <%= path.startsWith('/admin/orders') ? 'active' : '' %>">

@@ -5,6 +5,7 @@ const fs = require('fs');
 const multer = require('multer');
 const getDb = require('../lib/db');
 const { calculateCart } = require('../lib/cart');
+const { findOrderByToken } = require('../lib/orders');
 const { generateOrderNumber, generateToken, normalizePhone, now, formatDate, getStatusInfo } = require('../lib/helpers');
 
 // Multer storage for payment proofs
@@ -306,6 +307,49 @@ router.post('/checkout', (req, res) => {
       });
     }
 
+    // Cache order in client cookie for serverless multi-instance rehydration
+    const cachePayload = {
+      order: {
+        id: result.orderId,
+        order_number: result.orderNumber,
+        access_token: result.accessToken,
+        customer_name: customer_name.trim(),
+        customer_phone: normalizedPhone,
+        customer_email: customer_email ? customer_email.trim() : null,
+        method: method === 'delivery' ? 'delivery' : 'pickup',
+        address: method === 'delivery' ? address.trim() : null,
+        delivery_zone_id: method === 'delivery' ? (calc.deliveryFee > 0 ? (delivery_zone_id || 1) : null) : null,
+        delivery_fee: calc.deliveryFee,
+        notes: notes ? notes.trim() : null,
+        subtotal: calc.subtotal,
+        discount: calc.discount,
+        promo_id: calc.promo && calc.promo.valid ? calc.promo.id : null,
+        promo_code: calc.promo && calc.promo.valid ? calc.promo.code : null,
+        total: calc.total,
+        payment_status: 'UNPAID',
+        order_status: 'NEW',
+        idempotency_key: idempotency_key || null,
+        created_at: currentTime,
+        updated_at: currentTime
+      },
+      items: calc.items.map(it => ({
+        product_id: it.product_id || null,
+        bundle_id: it.bundle_id || null,
+        name: it.name,
+        variant: it.variant || null,
+        price: it.price,
+        quantity: it.quantity,
+        is_gift: it.is_gift ? 1 : 0,
+        components: it.components || null
+      }))
+    };
+
+    res.cookie('nch_ord_' + result.accessToken.slice(0, 16), JSON.stringify(cachePayload), {
+      maxAge: 7 * 24 * 60 * 60 * 1000,
+      httpOnly: true,
+      sameSite: 'lax'
+    });
+
     res.json({
       success: true,
       orderNumber: result.orderNumber,
@@ -323,7 +367,7 @@ router.get('/order/:token', (req, res) => {
   const { token } = req.params;
   const db = getDb();
 
-  const order = db.prepare('SELECT * FROM orders WHERE access_token = ?').get(token);
+  const order = findOrderByToken(token, req);
   if (!order) {
     return res.status(404).render('error', {
       title: 'Pesanan Tidak Ditemukan',
@@ -357,7 +401,7 @@ router.post('/order/:token/upload', uploadPayment.single('payment_proof'), (req,
   const { token } = req.params;
   const db = getDb();
 
-  const order = db.prepare('SELECT * FROM orders WHERE access_token = ?').get(token);
+  const order = findOrderByToken(token, req);
   if (!order) {
     return res.status(404).render('error', { title: 'Pesanan Tidak Ditemukan', message: 'Pesanan tidak ditemukan.' });
   }
@@ -435,6 +479,7 @@ router.post('/order/:token/upload', uploadPayment.single('payment_proof'), (req,
 router.get('/order/:token/proof/:id', (req, res) => {
   const { token, id } = req.params;
   const db = getDb();
+  findOrderByToken(token, req); // Ensure order is rehydrated in local SQLite if on fresh serverless instance
 
   const submission = db.prepare(`
     SELECT ps.*, o.access_token 

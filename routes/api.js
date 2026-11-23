@@ -2,17 +2,14 @@ const express = require('express');
 const router = express.Router();
 const getDb = require('../lib/db');
 const { calculateCart } = require('../lib/cart');
+const { findOrderByToken } = require('../lib/orders');
 
 // Polling endpoint for live order status
 router.get('/order/:token/status', (req, res) => {
   const { token } = req.params;
   const db = getDb();
 
-  const order = db.prepare(`
-    SELECT order_number, order_status, payment_status, updated_at 
-    FROM orders 
-    WHERE access_token = ?
-  `).get(token);
+  const order = findOrderByToken(token, req);
 
   if (!order) {
     return res.status(404).json({ success: false, message: 'Pesanan tidak ditemukan' });

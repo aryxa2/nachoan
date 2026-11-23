@@ -1,5 +1,6 @@
 const express = require('express');
-const session = require('express-session');
+const cookieSession = require('cookie-session');
+const cookieParser = require('cookie-parser');
 const path = require('path');
 const getDb = require('./lib/db');
 const { formatRupiah } = require('./lib/helpers');
@@ -17,19 +18,18 @@ if (process.env.VERCEL) {
   app.use('/uploads', express.static(path.join('/tmp', 'uploads')));
 }
 
-// --- Body parsers ---
+// --- Body & Cookie parsers ---
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+app.use(cookieParser('nachoan-secret-key-2026'));
 
-// --- Session ---
-app.use(session({
-  secret: process.env.SESSION_SECRET || 'nachoan-secret-key-2026',
-  resave: false,
-  saveUninitialized: false,
-  cookie: {
-    maxAge: 24 * 60 * 60 * 1000, // 24 hours
-    httpOnly: true,
-  },
+// --- Stateless Cookie-Based Session (100% Serverless & Vercel Multi-Instance Compatible) ---
+app.use(cookieSession({
+  name: 'nachoan_session',
+  keys: [process.env.SESSION_SECRET || 'nachoan-secret-key-2026'],
+  maxAge: 24 * 60 * 60 * 1000, // 24 hours
+  sameSite: 'lax',
+  httpOnly: true,
 }));
 
 // --- Global locals ---
