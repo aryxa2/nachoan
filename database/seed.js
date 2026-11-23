@@ -122,6 +122,7 @@ function seed() {
     phone: '+6281234567890',
     hours: 'PO Batch 1 (23-27 Nov) | Next Batch & Expo Coming Soon',
     instagram: '@nachoan_',
+    apps_script_url: 'https://script.google.com/macros/s/AKfycbyvsQbsJYl-IEtmkvACoUF6nEfPO8qxolw2SzfWU94seqlki13xFkNlqPm5hFLKFRc/exec',
     demo_mode: 'true',
   };
   const insertSetting = db.prepare(`INSERT OR REPLACE INTO store_settings (key, value) VALUES (?, ?)`);
