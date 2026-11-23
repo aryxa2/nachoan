@@ -19,12 +19,12 @@ console.log('✔ Admin account verified.');
 console.log('\nTest 2: Products & Menu Verification');
 const beefy = db.prepare('SELECT * FROM products WHERE slug = ?').get('beefy-nacho');
 assert(beefy, 'Beefy Nacho must exist');
-assert.strictEqual(beefy.price, 25000, 'Beefy Nacho must be Rp25.000');
+assert.strictEqual(beefy.price, 15000, 'Beefy Nacho must be Rp15.000');
 assert.strictEqual(beefy.spicy_levels, null, 'Beefy Nacho must not have spicy levels');
 
 const cheezy = db.prepare('SELECT * FROM products WHERE slug = ?').get('cheezy-corn');
 assert(cheezy, 'Cheezy Corn must exist');
-assert.strictEqual(cheezy.price, 22000, 'Cheezy Corn must be Rp22.000');
+assert.strictEqual(cheezy.price, 13000, 'Cheezy Corn must be Rp13.000');
 assert.strictEqual(cheezy.spicy_levels, null, 'Cheezy Corn must not have spicy levels');
 console.log('✔ Products Beefy Nacho and Cheezy Corn verified.');
 
@@ -33,53 +33,53 @@ console.log('\nTest 3: Cart Calculation with Beefy Nacho & Cheezy Corn');
 const cart1 = calculateCart([
   { type: 'product', id: 1, quantity: 1 }
 ]);
-assert.strictEqual(cart1.subtotal, 25000);
+assert.strictEqual(cart1.subtotal, 15000);
 
 const cart2 = calculateCart([
-  { type: 'product', id: 1, quantity: 2 }, // 50.000
-  { type: 'product', id: 2, quantity: 1 }  // 22.000
+  { type: 'product', id: 1, quantity: 2 }, // 30.000
+  { type: 'product', id: 2, quantity: 1 }  // 13.000
 ]);
-assert.strictEqual(cart2.subtotal, 72000);
+assert.strictEqual(cart2.subtotal, 43000);
 console.log('✔ Cart calculations verified.');
 
 // 4. Test Voucher Promos (NACHO10 & HEMAT5)
 console.log('\nTest 4: Promo Codes (NACHO10 & HEMAT5)');
 // NACHO10 gives 10%
 const cartPromo1 = calculateCart([
-  { type: 'product', id: 1, quantity: 2, variant: 'Original' } // 50.000
+  { type: 'product', id: 1, quantity: 4, variant: 'Original' } // 60.000
 ], { promoCode: 'NACHO10' });
 assert.strictEqual(cartPromo1.promo.valid, true);
-assert.strictEqual(cartPromo1.discount, 5000, '10% of 50.000 is 5.000');
-assert.strictEqual(cartPromo1.total, 45000);
+assert.strictEqual(cartPromo1.discount, 6000, '10% of 60.000 is 6.000');
+assert.strictEqual(cartPromo1.total, 54000);
 
 // HEMAT5 with subtotal < 50.000 should fail min purchase
 const cartPromo2Fail = calculateCart([
-  { type: 'product', id: 1, quantity: 1, variant: 'Original' } // 25.000
+  { type: 'product', id: 1, quantity: 1, variant: 'Original' } // 15.000
 ], { promoCode: 'HEMAT5' });
 assert.strictEqual(cartPromo2Fail.promo.valid, false, 'HEMAT5 should fail for subtotal < 50.000');
 
 // HEMAT5 with subtotal >= 50.000 should succeed
 const cartPromo2Pass = calculateCart([
-  { type: 'product', id: 1, quantity: 2, variant: 'Original' } // 50.000
+  { type: 'product', id: 1, quantity: 4, variant: 'Original' } // 60.000
 ], { promoCode: 'HEMAT5' });
 assert.strictEqual(cartPromo2Pass.promo.valid, true);
 assert.strictEqual(cartPromo2Pass.discount, 5000);
-assert.strictEqual(cartPromo2Pass.total, 45000);
+assert.strictEqual(cartPromo2Pass.total, 55000);
 console.log('✔ Voucher promos NACHO10 and HEMAT5 verified.');
 
 // 5. Test Delivery vs Pickup
 console.log('\nTest 5: Delivery and Pickup fees');
 const cartPickup = calculateCart([
-  { type: 'product', id: 2, quantity: 1 } // 22.000
+  { type: 'product', id: 2, quantity: 1 } // 13.000
 ], { method: 'pickup' });
 assert.strictEqual(cartPickup.deliveryFee, 0);
-assert.strictEqual(cartPickup.total, 22000);
+assert.strictEqual(cartPickup.total, 13000);
 
 const cartDelivery = calculateCart([
-  { type: 'product', id: 2, quantity: 1 } // 22.000
+  { type: 'product', id: 2, quantity: 1 } // 13.000
 ], { method: 'delivery' });
 assert.strictEqual(cartDelivery.deliveryFee, 2000, 'Diluar Telkom delivery fee must be Rp2.000');
-assert.strictEqual(cartDelivery.total, 24000);
+assert.strictEqual(cartDelivery.total, 15000);
 console.log('✔ Delivery and Pickup fees verified.');
 
 // 6. Test Idempotency & Order Generation
