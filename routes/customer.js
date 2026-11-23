@@ -41,10 +41,13 @@ const uploadPayment = multer({
 });
 
 // Homepage
-router.get('/', (req, res) => {
+router.get('/', async (req, res) => {
+  try {
+    await require('../lib/sheets').syncCatalogFromAppsScriptIfVercel();
+  } catch (e) {}
   const db = getDb();
-  const bestSellers = db.prepare('SELECT * FROM products WHERE available = 1 AND archived = 0 ORDER BY id ASC LIMIT 4').all();
-  const bundles = db.prepare('SELECT * FROM bundles WHERE available = 1 AND archived = 0 ORDER BY id ASC LIMIT 2').all();
+  const bestSellers = db.prepare('SELECT * FROM products WHERE available = 1 AND archived = 0 ORDER BY id ASC').all();
+  const bundles = db.prepare('SELECT * FROM bundles WHERE available = 1 AND archived = 0 ORDER BY id ASC').all();
   const promos = db.prepare('SELECT * FROM promotions WHERE active = 1 ORDER BY id ASC').all();
   const heroSlides = db.prepare('SELECT * FROM hero_slides WHERE active = 1 ORDER BY sort_order ASC, id ASC').all();
 
@@ -58,7 +61,10 @@ router.get('/', (req, res) => {
 });
 
 // Menu Catalog
-router.get('/menu', (req, res) => {
+router.get('/menu', async (req, res) => {
+  try {
+    await require('../lib/sheets').syncCatalogFromAppsScriptIfVercel();
+  } catch (e) {}
   const db = getDb();
   const categories = db.prepare('SELECT * FROM categories ORDER BY sort_order ASC').all();
   const products = db.prepare('SELECT * FROM products WHERE available = 1 AND archived = 0 ORDER BY category_id ASC, id ASC').all();
@@ -73,7 +79,10 @@ router.get('/menu', (req, res) => {
 });
 
 // Product Detail
-router.get('/product/:slug', (req, res) => {
+router.get('/product/:slug', async (req, res) => {
+  try {
+    await require('../lib/sheets').syncCatalogFromAppsScriptIfVercel();
+  } catch (e) {}
   const db = getDb();
   const product = db.prepare('SELECT * FROM products WHERE slug = ? AND archived = 0').get(req.params.slug);
 
@@ -152,7 +161,7 @@ router.get('/checkout', (req, res) => {
 });
 
 // Process Checkout
-router.post('/checkout', (req, res) => {
+router.post('/checkout', async (req, res) => {
   const db = getDb();
   const {
     customer_name,
@@ -295,18 +304,6 @@ router.post('/checkout', (req, res) => {
   try {
     const result = insertOrder();
 
-    // Asynchronously push to Google Sheets (Orders & OrderItems)
-    if (process.env.NODE_ENV !== 'test') {
-      setImmediate(() => {
-        try {
-          const sheets = require('../lib/sheets');
-          sheets.syncOrdersToSpreadsheet();
-        } catch (err) {
-          console.error('Auto sync to sheets error:', err.message);
-        }
-      });
-    }
-
     // Cache order in client cookie for serverless multi-instance rehydration
     const cachePayload = {
       order: {
@@ -343,6 +340,19 @@ router.post('/checkout', (req, res) => {
         components: it.components || null
       }))
     };
+
+    // Push to Google Sheets via Apps Script before responding (critical for Vercel serverless)
+    if (process.env.NODE_ENV !== 'test') {
+      try {
+        const sheets = require('../lib/sheets');
+        await sheets.pushOrderToAppsScript(cachePayload.order, cachePayload.items);
+        if (!process.env.VERCEL) {
+          sheets.syncOrdersToSpreadsheet();
+        }
+      } catch (err) {
+        console.error('Auto sync to sheets error:', err.message);
+      }
+    }
 
     res.cookie('nch_ord_' + result.accessToken.slice(0, 16), JSON.stringify(cachePayload), {
       maxAge: 7 * 24 * 60 * 60 * 1000,
@@ -397,7 +407,7 @@ router.get('/order/:token', (req, res) => {
 });
 
 // Upload Payment Proof
-router.post('/order/:token/upload', uploadPayment.single('payment_proof'), (req, res) => {
+router.post('/order/:token/upload', uploadPayment.single('payment_proof'), async (req, res) => {
   const { token } = req.params;
   const db = getDb();
 
@@ -416,17 +426,40 @@ router.post('/order/:token/upload', uploadPayment.single('payment_proof'), (req,
   const lastSub = db.prepare('SELECT MAX(version) as max_v FROM payment_submissions WHERE order_id = ?').get(order.id);
   const nextVersion = (lastSub && lastSub.max_v ? lastSub.max_v : 0) + 1;
 
+  let driveUrl = null;
+  if (process.env.NODE_ENV !== 'test') {
+    try {
+      const sheets = require('../lib/sheets');
+      const items = db.prepare('SELECT * FROM order_items WHERE order_id = ? ORDER BY id ASC').all(order.id);
+      const fileBuffer = fs.readFileSync(req.file.path);
+      const driveRes = await sheets.uploadPaymentProofToDrive({
+        order,
+        items,
+        fileBuffer,
+        fileName: req.file.originalname || req.file.filename,
+        mimeType: req.file.mimetype,
+        version: nextVersion
+      });
+      if (driveRes && driveRes.fileUrl) {
+        driveUrl = driveRes.fileUrl;
+      }
+    } catch (driveErr) {
+      console.error('Drive upload error:', driveErr.message);
+    }
+  }
+
   const saveProof = db.transaction(() => {
     // 1. Insert submission
     db.prepare(`
       INSERT INTO payment_submissions (
-        order_id, file_path, mime_type, file_size, version, status, created_at
-      ) VALUES (?, ?, ?, ?, ?, 'pending', ?)
+        order_id, file_path, mime_type, file_size, drive_url, version, status, created_at
+      ) VALUES (?, ?, ?, ?, ?, ?, 'pending', ?)
     `).run(
       order.id,
       req.file.filename,
       req.file.mimetype,
       req.file.size,
+      driveUrl,
       nextVersion,
       currentTime
     );
@@ -456,16 +489,13 @@ router.post('/order/:token/upload', uploadPayment.single('payment_proof'), (req,
   try {
     saveProof();
 
-    // Asynchronously push update to Google Sheets
-    if (process.env.NODE_ENV !== 'test') {
-      setImmediate(() => {
-        try {
-          const sheets = require('../lib/sheets');
-          sheets.syncOrdersToSpreadsheet();
-        } catch (err) {
-          console.error('Auto sync to sheets error:', err.message);
-        }
-      });
+    if (process.env.NODE_ENV !== 'test' && !process.env.VERCEL) {
+      try {
+        const sheets = require('../lib/sheets');
+        sheets.syncOrdersToSpreadsheet();
+      } catch (err) {
+        console.error('Auto sync to sheets error:', err.message);
+      }
     }
 
     res.redirect(`/order/${token}?uploaded=1`);
@@ -503,6 +533,9 @@ router.get('/order/:token/proof/:id', (req, res) => {
     filePath = path.join('/tmp', 'payments', submission.file_path);
   }
   if (!fs.existsSync(filePath)) {
+    if (submission.drive_url) {
+      return res.redirect(submission.drive_url);
+    }
     return res.status(404).send('File bukti transfer tidak ditemukan di server.');
   }
 

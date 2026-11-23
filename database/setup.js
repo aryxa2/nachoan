@@ -127,6 +127,7 @@ function setup() {
       file_path TEXT NOT NULL,
       mime_type TEXT NOT NULL,
       file_size INTEGER,
+      drive_url TEXT,
       version INTEGER NOT NULL,
       status TEXT DEFAULT 'pending',
       reviewer_id INTEGER,

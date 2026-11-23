@@ -95,7 +95,14 @@ router.get('/logout', (req, res) => {
 router.use(requireAuth);
 
 // Dashboard
-router.get('/', (req, res) => {
+router.get('/', async (req, res) => {
+  try {
+    const sheets = require('../lib/sheets');
+    await Promise.all([
+      sheets.syncCatalogFromAppsScriptIfVercel(),
+      sheets.syncOrdersFromAppsScriptIfVercel()
+    ]);
+  } catch (e) {}
   const db = getDb();
 
   // 1. Verified Revenue = sum of PAID orders ONLY
@@ -142,7 +149,14 @@ router.get('/', (req, res) => {
 });
 
 // Orders Management
-router.get('/orders', (req, res) => {
+router.get('/orders', async (req, res) => {
+  try {
+    const sheets = require('../lib/sheets');
+    await Promise.all([
+      sheets.syncOrdersFromAppsScriptIfVercel(),
+      sheets.syncCatalogFromAppsScriptIfVercel()
+    ]);
+  } catch (e) {}
   const db = getDb();
   const { status, search } = req.query;
 
@@ -194,7 +208,10 @@ router.get('/orders', (req, res) => {
 });
 
 // Order Detail
-router.get('/orders/:id', (req, res) => {
+router.get('/orders/:id', async (req, res) => {
+  try {
+    await require('../lib/sheets').syncOrdersFromAppsScriptIfVercel();
+  } catch (e) {}
   const db = getDb();
   const order = db.prepare('SELECT * FROM orders WHERE id = ?').get(req.params.id);
 
@@ -218,7 +235,7 @@ router.get('/orders/:id', (req, res) => {
 });
 
 // Verify Payment (Accept / Reject)
-router.post('/orders/:id/verify-payment', (req, res) => {
+router.post('/orders/:id/verify-payment', async (req, res) => {
   const { id } = req.params;
   const { action, reason, reference } = req.body;
   const db = getDb();
@@ -268,14 +285,13 @@ router.post('/orders/:id/verify-payment', (req, res) => {
     });
 
     approveTx();
-    setImmediate(() => {
-      try {
-        const sheets = require('../lib/sheets');
-        sheets.syncOrdersToSpreadsheet();
-      } catch (e) {
-        console.error('Sheets sync error:', e.message);
-      }
-    });
+    try {
+      const sheets = require('../lib/sheets');
+      await sheets.updateOrderStatusInAppsScript(order.order_number, 'PAID', 'PAID');
+      if (!process.env.VERCEL) sheets.syncOrdersToSpreadsheet();
+    } catch (e) {
+      console.error('Sheets sync error:', e.message);
+    }
     return res.redirect(`/admin/orders/${id}?msg=approved`);
   } else if (action === 'reject') {
     if (!reason || !reason.trim()) {
@@ -316,14 +332,13 @@ router.post('/orders/:id/verify-payment', (req, res) => {
     });
 
     rejectTx();
-    setImmediate(() => {
-      try {
-        const sheets = require('../lib/sheets');
-        sheets.syncOrdersToSpreadsheet();
-      } catch (e) {
-        console.error('Sheets sync error:', e.message);
-      }
-    });
+    try {
+      const sheets = require('../lib/sheets');
+      await sheets.updateOrderStatusInAppsScript(order.order_number, 'REJECTED', 'REJECTED');
+      if (!process.env.VERCEL) sheets.syncOrdersToSpreadsheet();
+    } catch (e) {
+      console.error('Sheets sync error:', e.message);
+    }
     return res.redirect(`/admin/orders/${id}?msg=rejected`);
   }
 
@@ -331,7 +346,7 @@ router.post('/orders/:id/verify-payment', (req, res) => {
 });
 
 // Update Operational Order Status (PREPARING, READY, COMPLETED, CANCELLED)
-router.post('/orders/:id/status', (req, res) => {
+router.post('/orders/:id/status', async (req, res) => {
   const { id } = req.params;
   const { order_status, note } = req.body;
   const db = getDb();
@@ -367,14 +382,13 @@ router.post('/orders/:id/status', (req, res) => {
   });
 
   updateTx();
-  setImmediate(() => {
-    try {
-      const sheets = require('../lib/sheets');
-      sheets.syncOrdersToSpreadsheet();
-    } catch (e) {
-      console.error('Sheets sync error:', e.message);
-    }
-  });
+  try {
+    const sheets = require('../lib/sheets');
+    await sheets.updateOrderStatusInAppsScript(order.order_number, null, order_status);
+    if (!process.env.VERCEL) sheets.syncOrdersToSpreadsheet();
+  } catch (e) {
+    console.error('Sheets sync error:', e.message);
+  }
   res.redirect(`/admin/orders/${id}?msg=status_updated`);
 });
 
@@ -656,7 +670,10 @@ router.post('/orders/reset-all', (req, res) => {
 });
 
 // Products Management
-router.get('/products', (req, res) => {
+router.get('/products', async (req, res) => {
+  try {
+    await require('../lib/sheets').syncCatalogFromAppsScriptIfVercel();
+  } catch (e) {}
   const db = getDb();
   const products = db.prepare(`
     SELECT p.*, c.name as category_name 
@@ -675,17 +692,39 @@ router.get('/products', (req, res) => {
 });
 
 // Create Product
-router.post('/products/new', uploadAdmin.single('image_file'), (req, res) => {
+router.post('/products/new', uploadAdmin.single('image_file'), async (req, res) => {
   const { name, category_id, description, price, spicy_levels, image_url } = req.body;
   const db = getDb();
+  const sheets = require('../lib/sheets');
   const currentTime = now();
 
-  let imagePath = image_url || '/images/products/loaded-nachos.jpg';
+  let imagePath = image_url || '/images/products/beefy-nacho.jpg';
   if (req.file) {
-    imagePath = `/uploads/${req.file.filename}`;
+    if (process.env.VERCEL) {
+      try {
+        const buf = fs.readFileSync(req.file.path);
+        const up = await sheets.uploadProductImageToDrive(buf, req.file.originalname || req.file.filename, req.file.mimetype);
+        if (up && up.thumbnailUrl) {
+          imagePath = up.thumbnailUrl;
+        } else if (req.file.size <= 35 * 1024) {
+          imagePath = `data:${req.file.mimetype};base64,${buf.toString('base64')}`;
+        } else {
+          imagePath = `/uploads/${req.file.filename}`;
+        }
+      } catch (e) {
+        imagePath = `/uploads/${req.file.filename}`;
+      }
+    } else {
+      imagePath = `/uploads/${req.file.filename}`;
+    }
   }
 
-  const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+  const baseSlug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') || 'menu';
+  let slug = baseSlug;
+  let suffix = 2;
+  while (db.prepare('SELECT id FROM products WHERE slug = ?').get(slug)) {
+    slug = `${baseSlug}-${suffix++}`;
+  }
 
   let parsedSpicy = null;
   if (spicy_levels && spicy_levels.trim()) {
@@ -696,21 +735,23 @@ router.post('/products/new', uploadAdmin.single('image_file'), (req, res) => {
     INSERT INTO products (
       category_id, name, slug, description, price, image, spicy_levels, available, archived, created_at, updated_at
     ) VALUES (?, ?, ?, ?, ?, ?, ?, 1, 0, ?, ?)
-  `).run(category_id, name, slug, description, parseInt(price, 10), imagePath, parsedSpicy, currentTime, currentTime);
+  `).run(parseInt(category_id, 10) || 1, name.trim(), slug, description || '', parseInt(price, 10), imagePath, parsedSpicy, currentTime, currentTime);
 
   try {
-    const { syncAllToSpreadsheet } = require('../lib/sheets');
-    syncAllToSpreadsheet();
+    sheets.invalidateCatalogCache();
+    await sheets.pushProductsToAppsScript();
+    if (!process.env.VERCEL) sheets.syncAllToSpreadsheet();
   } catch (e) {}
 
   res.redirect('/admin/products?msg=created');
 });
 
 // Edit Product
-router.post('/products/:id/edit', uploadAdmin.single('image_file'), (req, res) => {
+router.post('/products/:id/edit', uploadAdmin.single('image_file'), async (req, res) => {
   const { id } = req.params;
   const { name, category_id, description, price, spicy_levels, available, current_image } = req.body;
   const db = getDb();
+  const sheets = require('../lib/sheets');
   const currentTime = now();
 
   const existing = db.prepare('SELECT * FROM products WHERE id = ?').get(id);
@@ -718,7 +759,23 @@ router.post('/products/:id/edit', uploadAdmin.single('image_file'), (req, res) =
 
   let imagePath = existing.image;
   if (req.file) {
-    imagePath = `/uploads/${req.file.filename}`;
+    if (process.env.VERCEL) {
+      try {
+        const buf = fs.readFileSync(req.file.path);
+        const up = await sheets.uploadProductImageToDrive(buf, req.file.originalname || req.file.filename, req.file.mimetype);
+        if (up && up.thumbnailUrl) {
+          imagePath = up.thumbnailUrl;
+        } else if (req.file.size <= 35 * 1024) {
+          imagePath = `data:${req.file.mimetype};base64,${buf.toString('base64')}`;
+        } else {
+          imagePath = `/uploads/${req.file.filename}`;
+        }
+      } catch (e) {
+        imagePath = `/uploads/${req.file.filename}`;
+      }
+    } else {
+      imagePath = `/uploads/${req.file.filename}`;
+    }
   } else if (current_image) {
     imagePath = current_image;
   }
@@ -733,9 +790,9 @@ router.post('/products/:id/edit', uploadAdmin.single('image_file'), (req, res) =
     SET name = ?, category_id = ?, description = ?, price = ?, spicy_levels = ?, image = ?, available = ?, updated_at = ?
     WHERE id = ?
   `).run(
-    name,
-    parseInt(category_id, 10),
-    description,
+    name.trim(),
+    parseInt(category_id, 10) || existing.category_id,
+    description || '',
     parseInt(price, 10),
     parsedSpicy,
     imagePath,
@@ -745,30 +802,41 @@ router.post('/products/:id/edit', uploadAdmin.single('image_file'), (req, res) =
   );
 
   try {
-    const { syncAllToSpreadsheet } = require('../lib/sheets');
-    syncAllToSpreadsheet();
+    sheets.invalidateCatalogCache();
+    await sheets.pushProductsToAppsScript();
+    if (!process.env.VERCEL) sheets.syncAllToSpreadsheet();
   } catch (e) {}
 
   res.redirect('/admin/products?msg=updated');
 });
 
 // Toggle Product Availability
-router.post('/products/:id/toggle', (req, res) => {
+router.post('/products/:id/toggle', async (req, res) => {
   const db = getDb();
   const prod = db.prepare('SELECT available FROM products WHERE id = ?').get(req.params.id);
   if (prod) {
     const nextVal = prod.available ? 0 : 1;
     db.prepare('UPDATE products SET available = ?, updated_at = ? WHERE id = ?')
       .run(nextVal, now(), req.params.id);
+    try {
+      const sheets = require('../lib/sheets');
+      sheets.invalidateCatalogCache();
+      await sheets.pushProductsToAppsScript();
+    } catch (e) {}
   }
   res.redirect('/admin/products');
 });
 
 // Delete (Archive) Product
-router.post('/products/:id/delete', (req, res) => {
+router.post('/products/:id/delete', async (req, res) => {
   const db = getDb();
   db.prepare('UPDATE products SET archived = 1, updated_at = ? WHERE id = ?')
     .run(now(), req.params.id);
+  try {
+    const sheets = require('../lib/sheets');
+    sheets.invalidateCatalogCache();
+    await sheets.pushProductsToAppsScript();
+  } catch (e) {}
   res.redirect('/admin/products?msg=deleted');
 });
 
