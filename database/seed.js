@@ -29,8 +29,8 @@ function seed() {
 
   // --- Products ---
   const products = [
-    { id: 1, category_id: 1, name: 'Beefy Nacho', slug: 'beefy-nacho', description: 'Perpaduan tortilla cone yang renyah dengan limpahan saus bolognese dan daging cincang spesial bertopping keju.', price: 25000, image: '/images/products/beefy-nacho.jpg', spicy_levels: null, available: 1, archived: 0 },
-    { id: 2, category_id: 1, name: 'Cheezy Corn', slug: 'cheezy-corn', description: 'Perpaduan renyahnya cone tortilla dengan jagung manis segar pilihan serta lelehan keju lumer yang gurih dan nikmat.', price: 22000, image: '/images/products/cheezy-corn.jpg', spicy_levels: null, available: 1, archived: 0 },
+    { id: 1, category_id: 1, name: 'Beefy Nacho', slug: 'beefy-nacho', description: 'Perpaduan tortilla cone yang renyah dengan limpahan saus bolognese dan daging cincang spesial bertopping keju.', price: 15000, image: '/images/products/beefy-nacho.jpg', spicy_levels: null, available: 1, archived: 0 },
+    { id: 2, category_id: 1, name: 'Cheezy Corn', slug: 'cheezy-corn', description: 'Perpaduan renyahnya cone tortilla dengan jagung manis segar pilihan serta lelehan keju lumer yang gurih dan nikmat.', price: 13000, image: '/images/products/cheezy-corn.jpg', spicy_levels: null, available: 1, archived: 0 },
     { id: 3, category_id: 1, name: 'Spicy Beef Nachos', slug: 'spicy-beef-nachos', description: 'Nachos dengan daging sapi pedas', price: 27000, image: '/images/products/spicy-beef-nachos.jpg', spicy_levels: null, available: 0, archived: 1 },
     { id: 4, category_id: 1, name: 'Chicken Nachos', slug: 'chicken-nachos', description: 'Nachos dengan ayam crispy', price: 26000, image: '/images/products/chicken-nachos.jpg', spicy_levels: null, available: 0, archived: 1 },
     { id: 5, category_id: 2, name: 'Cheese Dip', slug: 'cheese-dip', description: 'Saus keju premium untuk celupan', price: 8000, image: '/images/products/cheese-dip.jpg', spicy_levels: null, available: 0, archived: 1 },
