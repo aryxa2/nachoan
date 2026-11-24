@@ -198,7 +198,7 @@ router.get('/orders', async (req, res) => {
   };
 
   // Active products for manual order modal
-  const activeProducts = db.prepare('SELECT id, name, price FROM products WHERE available = 1 AND archived = 0 ORDER BY id ASC').all();
+  const activeProducts = db.prepare('SELECT id, name, slug, price FROM products WHERE available = 1 AND archived = 0 ORDER BY id ASC').all();
 
   res.render('admin/orders', {
     title: 'Kelola Pesanan - Admin NACHOAN',
@@ -664,6 +664,90 @@ router.post('/orders/create-manual', (req, res) => {
     orderId: newOrderId,
     orderNumber
   });
+});
+
+// Preview Parsed Bulk Orders from Text
+router.post('/orders/preview-bulk-text', (req, res) => {
+  const db = getDb();
+  const { rawText } = req.body;
+  const { parseBulkOrdersText } = require('../lib/orders');
+  const activeProducts = db.prepare('SELECT id, name, slug, price FROM products WHERE available = 1 AND archived = 0 ORDER BY id ASC').all();
+  const parsed = parseBulkOrdersText(rawText || '', activeProducts);
+
+  const preview = parsed.map(o => {
+    const deliveryFee = o.method === 'delivery' ? 2000 : 0;
+    const items = o.items || [];
+    const subtotal = items.reduce((sum, it) => sum + (it.price * it.quantity), 0);
+    const total = subtotal + deliveryFee;
+    const warnings = [];
+    if (!o.customer_name) warnings.push('Nama pemesan belum terisi');
+    if (!o.customer_phone) warnings.push('Nomor WA belum terisi');
+    if (items.length === 0) warnings.push('Tidak ada item menu yang terdeteksi');
+    if (o.method === 'delivery' && !o.address) warnings.push('Alamat delivery belum diisi');
+
+    return {
+      ...o,
+      subtotal,
+      delivery_fee: deliveryFee,
+      total,
+      isValid: warnings.length === 0,
+      warnings
+    };
+  });
+
+  res.json({
+    success: true,
+    totalParsed: preview.length,
+    validCount: preview.filter(p => p.isValid).length,
+    orders: preview
+  });
+});
+
+// Create Bulk Orders via Text Format from Admin
+router.post('/orders/create-bulk-text', (req, res) => {
+  const db = getDb();
+  const { rawText, orders: incomingOrders } = req.body;
+  const adminName = (req.session && req.session.admin && req.session.admin.username) ? req.session.admin.username : 'admin';
+  const { parseBulkOrdersText, createBulkOrdersService } = require('../lib/orders');
+
+  let ordersToCreate = [];
+
+  if (Array.isArray(incomingOrders) && incomingOrders.length > 0) {
+    ordersToCreate = incomingOrders;
+  } else if (rawText && typeof rawText === 'string') {
+    const activeProducts = db.prepare('SELECT id, name, slug, price FROM products WHERE available = 1 AND archived = 0 ORDER BY id ASC').all();
+    ordersToCreate = parseBulkOrdersText(rawText, activeProducts);
+  }
+
+  if (!ordersToCreate || ordersToCreate.length === 0) {
+    return res.status(400).json({
+      success: false,
+      message: 'Tidak ada format pesanan valid yang terdeteksi. Silakan periksa format teks masukan.'
+    });
+  }
+
+  try {
+    const created = createBulkOrdersService(ordersToCreate, db, adminName);
+    if (created.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Gagal membuat pesanan. Pastikan setiap pesanan memiliki nama, no WhatsApp, dan menu yang valid.'
+      });
+    }
+
+    res.json({
+      success: true,
+      message: `Berhasil membuat ${created.length} pesanan manual dan disinkronkan ke Google Sheets!`,
+      count: created.length,
+      orders: created
+    });
+  } catch (err) {
+    console.error('Error in create-bulk-text:', err);
+    res.status(500).json({
+      success: false,
+      message: 'Terjadi kesalahan sistem saat memproses pesanan massal: ' + err.message
+    });
+  }
 });
 
 // Sync FROM Spreadsheet -> Website (Pull changes)

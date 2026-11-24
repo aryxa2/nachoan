@@ -255,87 +255,152 @@
 
 <!-- Modal Tambah Pesanan Manual -->
 <div id="manual-order-modal" class="modal-overlay">
-  <div class="modal-content">
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; border-bottom: 1px solid var(--border-color); padding-bottom: 10px;">
-      <h2 style="font-size: 18px; color: var(--text-dark); margin: 0;">+ Tambah Pesanan Manual</h2>
-      <button type="button" onclick="closeManualOrderModal()" style="border: none; background: none; font-size: 22px; cursor: pointer;">&times;</button>
+  <div class="modal-content" style="max-width: 680px;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; border-bottom: 1px solid var(--border-color); padding-bottom: 10px;">
+      <h2 style="font-size: 18px; color: var(--text-dark); margin: 0; font-weight: 700;">+ Tambah Pesanan Manual</h2>
+      <button type="button" onclick="closeManualOrderModal()" style="border: none; background: none; font-size: 24px; cursor: pointer; color: var(--text-muted);">&times;</button>
     </div>
 
-    <form id="manual-order-form" onsubmit="submitManualOrder(event)">
-      <div class="form-group">
-        <label class="form-label">Nama Pemesan *</label>
-        <input type="text" id="man-name" class="form-control" placeholder="Contoh: Siti Aisyah" required>
-      </div>
+    <!-- Tab navigation -->
+    <div style="display: flex; gap: 8px; margin-bottom: 16px; border-bottom: 2px solid var(--border-color); padding-bottom: 8px;">
+      <button type="button" id="tab-btn-single" class="btn btn-sm" onclick="switchManualOrderTab('single')" style="font-weight: 600; border-radius: var(--radius-sm); border: 1px solid var(--primary); background: var(--primary); color: #fff;">
+        📝 Formulir Satuan
+      </button>
+      <button type="button" id="tab-btn-bulk" class="btn btn-sm btn-outline" onclick="switchManualOrderTab('bulk')" style="font-weight: 600; border-radius: var(--radius-sm);">
+        📋 Input Teks Massal / Batch
+      </button>
+    </div>
 
-      <div class="form-group">
-        <label class="form-label">Nomor WhatsApp / HP *</label>
-        <input type="tel" id="man-phone" class="form-control" placeholder="Contoh: 081234567890" required>
-      </div>
+    <!-- Tab 1: Single Order Form (Existing form completely preserved) -->
+    <div id="tab-content-single">
+      <form id="manual-order-form" onsubmit="submitManualOrder(event)">
+        <div class="form-group">
+          <label class="form-label">Nama Pemesan *</label>
+          <input type="text" id="man-name" class="form-control" placeholder="Contoh: Siti Aisyah" required>
+        </div>
 
-      <div class="form-group">
-        <label class="form-label">Metode Pengambilan</label>
-        <select id="man-method" class="form-control" onchange="toggleManualAddress()">
-          <option value="pickup">Ambil di Pick Up Point (Pickup - Rp0)</option>
-          <option value="delivery">Delivery (Diluar Telkom - Rp2.000)</option>
-        </select>
-      </div>
+        <div class="form-group">
+          <label class="form-label">Nomor WhatsApp / HP *</label>
+          <input type="tel" id="man-phone" class="form-control" placeholder="Contoh: 081234567890" required>
+        </div>
 
-      <div class="form-group" id="man-address-group" style="display: none;">
-        <label class="form-label">Alamat Pengantaran *</label>
-        <textarea id="man-address" class="form-control" rows="2" placeholder="Alamat lengkap tujuan..."></textarea>
-      </div>
+        <div class="form-group">
+          <label class="form-label">Metode Pengambilan</label>
+          <select id="man-method" class="form-control" onchange="toggleManualAddress()">
+            <option value="pickup">Ambil di Pick Up Point (Pickup - Rp0)</option>
+            <option value="delivery">Delivery (Diluar Telkom - Rp2.000)</option>
+          </select>
+        </div>
 
-      <!-- Menu Selection -->
-      <div class="form-group">
-        <label class="form-label">Pilihan Menu:</label>
-        <div style="display: flex; flex-direction: column; gap: 8px;">
-          <% if (typeof activeProducts !== 'undefined' && activeProducts.length > 0) { %>
-            <% for (const p of activeProducts) { %>
-              <div style="display: flex; justify-content: space-between; align-items: center; background: #FFF8F0; padding: 10px 14px; border-radius: var(--radius-sm); border: 1px solid var(--border-color);">
-                <div>
-                  <div style="font-weight: 700; font-size: 14px;"><%= p.name %></div>
-                  <div style="font-size: 12px; color: var(--text-muted);"><%= formatRupiah(p.price) %></div>
+        <div class="form-group" id="man-address-group" style="display: none;">
+          <label class="form-label">Alamat Pengantaran *</label>
+          <textarea id="man-address" class="form-control" rows="2" placeholder="Alamat lengkap tujuan..."></textarea>
+        </div>
+
+        <!-- Menu Selection -->
+        <div class="form-group">
+          <label class="form-label">Pilihan Menu:</label>
+          <div style="display: flex; flex-direction: column; gap: 8px;">
+            <% if (typeof activeProducts !== 'undefined' && activeProducts.length > 0) { %>
+              <% for (const p of activeProducts) { %>
+                <div style="display: flex; justify-content: space-between; align-items: center; background: #FFF8F0; padding: 10px 14px; border-radius: var(--radius-sm); border: 1px solid var(--border-color);">
+                  <div>
+                    <div style="font-weight: 700; font-size: 14px;"><%= p.name %></div>
+                    <div style="font-size: 12px; color: var(--text-muted);"><%= formatRupiah(p.price) %></div>
+                  </div>
+                  <div style="display: flex; align-items: center; gap: 8px;">
+                    <span style="font-size: 13px;">Qty:</span>
+                    <input type="number" class="form-control man-qty" data-id="<%= p.id %>" data-price="<%= p.price %>" min="0" value="0" style="width: 70px; text-align: center;">
+                  </div>
                 </div>
-                <div style="display: flex; align-items: center; gap: 8px;">
-                  <span style="font-size: 13px;">Qty:</span>
-                  <input type="number" class="form-control man-qty" data-id="<%= p.id %>" data-price="<%= p.price %>" min="0" value="0" style="width: 70px; text-align: center;">
-                </div>
-              </div>
+              <% } %>
             <% } %>
-          <% } %>
+          </div>
         </div>
-      </div>
 
-      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+          <div class="form-group">
+            <label class="form-label">Status Pembayaran</label>
+            <select id="man-payment-status" class="form-control">
+              <option value="PAID">Lunas (PAID)</option>
+              <option value="UNPAID">Belum Bayar (UNPAID)</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Status Pesanan</label>
+            <select id="man-order-status" class="form-control">
+              <option value="NEW">NEW (Pesanan Baru)</option>
+              <option value="PREPARING">PREPARING (Dimasak)</option>
+              <option value="READY">READY (Siap)</option>
+              <option value="COMPLETED">COMPLETED (Selesai)</option>
+            </select>
+          </div>
+        </div>
+
         <div class="form-group">
-          <label class="form-label">Status Pembayaran</label>
-          <select id="man-payment-status" class="form-control">
-            <option value="PAID">Lunas (PAID)</option>
-            <option value="UNPAID">Belum Bayar (UNPAID)</option>
-          </select>
+          <label class="form-label">Catatan Pesanan (Opsional)</label>
+          <input type="text" id="man-notes" class="form-control" placeholder="Contoh: Saus dipisah">
         </div>
 
-        <div class="form-group">
-          <label class="form-label">Status Pesanan</label>
-          <select id="man-order-status" class="form-control">
-            <option value="NEW">NEW (Pesanan Baru)</option>
-            <option value="PREPARING">PREPARING (Dimasak)</option>
-            <option value="READY">READY (Siap)</option>
-            <option value="COMPLETED">COMPLETED (Selesai)</option>
-          </select>
+        <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 16px;">
+          <button type="button" class="btn btn-outline" onclick="closeManualOrderModal()">Batal</button>
+          <button type="submit" id="btn-save-manual" class="btn btn-primary">Simpan & Sync ke Sheets &rsaquo;</button>
+        </div>
+      </form>
+    </div>
+
+    <!-- Tab 2: Bulk Text Input -->
+    <div id="tab-content-bulk" style="display: none;">
+      <div style="background: #fffbeb; border: 1px solid #fde68a; border-radius: var(--radius-sm); padding: 12px 14px; margin-bottom: 14px; font-size: 13px; color: #92400e;">
+        <div style="font-weight: 700; margin-bottom: 4px; display: flex; align-items: center; gap: 6px;">
+          <span>💡 Input Banyak Pesanan Sekaligus</span>
+        </div>
+        <p style="margin: 0 0 8px 0; line-height: 1.4;">
+          Tempel langsung rekapan pesanan dari WhatsApp atau format baris. Sistem otomatis mendeteksi nama, nomor HP, metode, item pesanan, dan catatan.
+        </p>
+        <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+          <button type="button" class="btn btn-sm btn-outline" onclick="insertBulkTemplate('chat')" style="font-size: 11px; padding: 4px 8px; background: #fff;">
+            📋 Contoh Format Chat WA
+          </button>
+          <button type="button" class="btn btn-sm btn-outline" onclick="insertBulkTemplate('pipe')" style="font-size: 11px; padding: 4px 8px; background: #fff;">
+            📋 Contoh Format Baris (Pipe |)
+          </button>
+          <button type="button" class="btn btn-sm btn-outline" onclick="clearBulkText()" style="font-size: 11px; padding: 4px 8px; background: #fff; color: #b91c1c;">
+            🧹 Bersihkan
+          </button>
         </div>
       </div>
 
-      <div class="form-group">
-        <label class="form-label">Catatan Pesanan (Opsional)</label>
-        <input type="text" id="man-notes" class="form-control" placeholder="Contoh: Saus dipisah">
+      <div class="form-group" style="margin-bottom: 12px;">
+        <label class="form-label" style="font-size: 13px; font-weight: 600;">Format Teks Pesanan *</label>
+        <textarea id="bulk-orders-text" class="form-control" rows="8" placeholder="Tempel format chat WA atau baris pipe di sini..." style="font-family: monospace; font-size: 12.5px; line-height: 1.4;" oninput="onBulkTextInput()"></textarea>
       </div>
 
-      <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 16px;">
+      <!-- Live Preview Container -->
+      <div id="bulk-preview-wrapper" style="margin-bottom: 16px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+          <span style="font-size: 13px; font-weight: 700; color: var(--text-dark);">
+            Pratinjau Hasil Parsing: <span id="bulk-summary-badge" style="font-weight: 600; font-size: 12px; color: var(--text-muted);">(Ketik atau tempel teks untuk melihat hasil)</span>
+          </span>
+          <button type="button" class="btn btn-sm btn-outline" onclick="refreshBulkPreview()" style="font-size: 11px; padding: 3px 8px;">
+            🔄 Refresh Pratinjau
+          </button>
+        </div>
+        <div id="bulk-preview-list" style="max-height: 220px; overflow-y: auto; border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 8px; background: #fafafa; font-size: 12px;">
+          <div style="text-align: center; color: var(--text-muted); padding: 16px;">
+            Belum ada pesanan yang diinput. Klik "Contoh Format" di atas untuk mencoba.
+          </div>
+        </div>
+      </div>
+
+      <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 16px; border-top: 1px solid var(--border-color); padding-top: 12px;">
         <button type="button" class="btn btn-outline" onclick="closeManualOrderModal()">Batal</button>
-        <button type="submit" id="btn-save-manual" class="btn btn-primary">Simpan & Sync ke Sheets &rsaquo;</button>
+        <button type="button" id="btn-save-bulk" class="btn btn-primary" onclick="submitBulkOrders()">
+          🚀 Simpan Pesanan & Sync ke Sheets &rsaquo;
+        </button>
       </div>
-    </form>
+    </div>
   </div>
 </div>
 
@@ -653,6 +718,199 @@
       await showAlert('Terjadi kesalahan koneksi server.', { type: 'error' });
       btn.disabled = false;
       btn.textContent = 'Simpan & Sync ke Sheets ›';
+    }
+  }
+
+  // Switch Tabs in Manual Order Modal
+  function switchManualOrderTab(tab) {
+    const singleContent = document.getElementById('tab-content-single');
+    const bulkContent = document.getElementById('tab-content-bulk');
+    const btnSingle = document.getElementById('tab-btn-single');
+    const btnBulk = document.getElementById('tab-btn-bulk');
+
+    if (tab === 'bulk') {
+      singleContent.style.display = 'none';
+      bulkContent.style.display = 'block';
+      btnSingle.className = 'btn btn-sm btn-outline';
+      btnSingle.style.background = '';
+      btnSingle.style.color = '';
+      btnSingle.style.border = '';
+      btnBulk.className = 'btn btn-sm';
+      btnBulk.style.background = 'var(--primary)';
+      btnBulk.style.color = '#fff';
+      btnBulk.style.border = '1px solid var(--primary)';
+      
+      const txt = document.getElementById('bulk-orders-text').value.trim();
+      if (txt) {
+        refreshBulkPreview();
+      }
+    } else {
+      bulkContent.style.display = 'none';
+      singleContent.style.display = 'block';
+      btnBulk.className = 'btn btn-sm btn-outline';
+      btnBulk.style.background = '';
+      btnBulk.style.color = '';
+      btnBulk.style.border = '';
+      btnSingle.className = 'btn btn-sm';
+      btnSingle.style.background = 'var(--primary)';
+      btnSingle.style.color = '#fff';
+      btnSingle.style.border = '1px solid var(--primary)';
+    }
+  }
+
+  // Bulk Templates
+  function insertBulkTemplate(type) {
+    const txtArea = document.getElementById('bulk-orders-text');
+    if (type === 'chat') {
+      txtArea.value = `Nama: Budi Santoso\nWA: 081234567890\nMetode: Delivery\nAlamat: Kost Sakura Jl. Telekomunikasi No. 12\nPesanan: 2x Beefy Nacho, 1x Cheezy Corn\nCatatan: Saus sambal dipisah\n---\nNama: Siti Rahma\nWA: 085712345678\nMetode: Pickup\nPesanan: 1x Beefy Nacho\nCatatan: Jangan terlalu pedas`;
+    } else {
+      txtArea.value = `Budi Santoso | 081234567890 | Delivery | Kost Sakura Jl. Telekomunikasi No. 12 | 2x Beefy Nacho, 1x Cheezy Corn | Saus dipisah\nSiti Rahma | 085712345678 | Pickup | - | 1x Beefy Nacho | Jangan pedas`;
+    }
+    refreshBulkPreview();
+  }
+
+  function clearBulkText() {
+    document.getElementById('bulk-orders-text').value = '';
+    document.getElementById('bulk-summary-badge').textContent = '(Ketik atau tempel teks untuk melihat hasil)';
+    document.getElementById('bulk-summary-badge').style.color = 'var(--text-muted)';
+    document.getElementById('bulk-preview-list').innerHTML = `
+      <div style="text-align: center; color: var(--text-muted); padding: 16px;">
+        Belum ada pesanan yang diinput. Klik "Contoh Format" di atas untuk mencoba.
+      </div>
+    `;
+    const btnSave = document.getElementById('btn-save-bulk');
+    btnSave.textContent = '🚀 Simpan Pesanan & Sync ke Sheets ›';
+    btnSave.disabled = false;
+  }
+
+  let bulkInputTimer = null;
+  function onBulkTextInput() {
+    clearTimeout(bulkInputTimer);
+    bulkInputTimer = setTimeout(() => {
+      refreshBulkPreview();
+    }, 600);
+  }
+
+  // Refresh bulk preview
+  async function refreshBulkPreview() {
+    const text = document.getElementById('bulk-orders-text').value.trim();
+    const listEl = document.getElementById('bulk-preview-list');
+    const badgeEl = document.getElementById('bulk-summary-badge');
+    const btnSave = document.getElementById('btn-save-bulk');
+
+    if (!text) {
+      clearBulkText();
+      return;
+    }
+
+    badgeEl.textContent = 'Memeriksa format...';
+    badgeEl.style.color = 'var(--text-muted)';
+
+    try {
+      const res = await fetch('/admin/orders/preview-bulk-text', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
+        body: JSON.stringify({ rawText: text })
+      });
+      const data = await res.json();
+
+      if (!data.success || !data.orders || data.orders.length === 0) {
+        badgeEl.textContent = '(Tidak ada pesanan valid yang terdeteksi)';
+        badgeEl.style.color = '#b91c1c';
+        listEl.innerHTML = `
+          <div style="padding: 12px; color: #b91c1c; text-align: center;">
+            ⚠️ Format teks tidak dikenali. Gunakan tombol "Contoh Format" di atas sebagai panduan.
+          </div>
+        `;
+        btnSave.textContent = '🚀 Simpan Pesanan & Sync ke Sheets ›';
+        btnSave.disabled = true;
+        return;
+      }
+
+      badgeEl.textContent = `(${data.validCount} valid dari ${data.totalParsed} pesanan terdeteksi)`;
+      badgeEl.style.color = data.validCount === data.totalParsed ? '#15803d' : '#b45309';
+
+      let html = '<div style="display: flex; flex-direction: column; gap: 8px;">';
+      data.orders.forEach((o, idx) => {
+        const itemNames = (o.items || []).map(i => `${i.quantity}x ${i.name} (Rp${(i.price || 0).toLocaleString('id-ID')})`).join(', ');
+        const warningHtml = o.warnings && o.warnings.length > 0
+          ? `<div style="color: #b91c1c; font-size: 11px; margin-top: 4px;">⚠️ Perhatian: ${o.warnings.join(', ')}</div>`
+          : '';
+        const borderCol = o.isValid ? '#bbf7d0' : '#fecaca';
+        const bgCol = o.isValid ? '#f0fdf4' : '#fef2f2';
+
+        html += `
+          <div style="border: 1px solid ${borderCol}; background: ${bgCol}; border-radius: 6px; padding: 8px 10px;">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 4px;">
+              <div>
+                <strong>#${idx + 1}. ${o.customer_name || '<em style="color:#b91c1c;">(Nama kosong)</em>'}</strong>
+                <span style="color: var(--text-muted); font-size: 11.5px; margin-left: 6px;">(${o.customer_phone || '<em style="color:#b91c1c;">No HP kosong</em>'})</span>
+              </div>
+              <div style="text-align: right;">
+                <span style="font-weight: 700; color: #991b1b;">Rp${(o.total || 0).toLocaleString('id-ID')}</span>
+                <span style="font-size: 10px; padding: 2px 6px; border-radius: 4px; margin-left: 4px; background: ${o.method === 'delivery' ? '#e0f2fe' : '#fef3c7'}; color: ${o.method === 'delivery' ? '#0369a1' : '#92400e'};">
+                  ${o.method === 'delivery' ? 'Delivery (+Rp2.000)' : 'Pickup'}
+                </span>
+              </div>
+            </div>
+            <div style="font-size: 11.5px; color: #374151;">
+              <strong>Menu:</strong> ${itemNames || '<span style="color: #b91c1c;">Tidak ada menu yang cocok</span>'}
+            </div>
+            ${o.method === 'delivery' && o.address ? `<div style="font-size: 11px; color: #4b5563;"><strong>Alamat:</strong> ${o.address}</div>` : ''}
+            ${o.notes ? `<div style="font-size: 11px; color: #6b7280; font-style: italic;"><strong>Catatan:</strong> ${o.notes}</div>` : ''}
+            ${warningHtml}
+          </div>
+        `;
+      });
+      html += '</div>';
+
+      listEl.innerHTML = html;
+      btnSave.disabled = data.validCount === 0;
+      btnSave.textContent = `🚀 Simpan ${data.validCount} Pesanan & Sync ke Sheets ›`;
+
+    } catch (err) {
+      badgeEl.textContent = '(Gagal memeriksa teks)';
+      badgeEl.style.color = '#b91c1c';
+    }
+  }
+
+  // Submit bulk orders
+  async function submitBulkOrders() {
+    const text = document.getElementById('bulk-orders-text').value.trim();
+    if (!text) {
+      return showAlert('Silakan masukkan atau tempel format teks pesanan terlebih dahulu.', { type: 'warning' });
+    }
+
+    const btn = document.getElementById('btn-save-bulk');
+    btn.disabled = true;
+    showLoading('Membuat Pesanan Massal...', 'Sedang memproses seluruh pesanan, menyimpan ke database, dan menyinkronkan ke Google Sheets...');
+
+    try {
+      const res = await fetch('/admin/orders/create-bulk-text', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
+        body: JSON.stringify({ rawText: text })
+      });
+      const data = await res.json();
+      hideLoading();
+
+      if (data.success) {
+        await showAlert(data.message || `Berhasil membuat ${data.count} pesanan!`, { type: 'success', title: 'Pesanan Massal Berhasil' });
+        window.location.reload();
+      } else {
+        await showAlert(data.message || 'Gagal menyimpan pesanan massal.', { type: 'error' });
+        btn.disabled = false;
+      }
+    } catch (err) {
+      hideLoading();
+      await showAlert('Terjadi kesalahan koneksi atau server saat memproses pesanan massal.', { type: 'error' });
+      btn.disabled = false;
     }
   }
 </script>
