@@ -1309,6 +1309,29 @@ router.post('/carousel/:id/delete', (req, res) => {
   res.redirect('/admin/carousel?msg=deleted');
 });
 
-module.exports = router;
+// Delete Order (hard delete)
+router.post('/orders/:id/delete', async (req, res) => {
+  const { id } = req.params;
+  const db = getDb();
+  const order = db.prepare('SELECT * FROM orders WHERE id = ?').get(id);
+  if (!order) {
+    return res.status(404).send('Pesanan tidak ditemukan.');
+  }
+  const tx = db.transaction(() => {
+    // Delete related items
+    db.prepare('DELETE FROM order_items WHERE order_id = ?').run(id);
+    db.prepare('DELETE FROM payment_submissions WHERE order_id = ?').run(id);
+    db.prepare('DELETE FROM order_status_history WHERE order_id = ?').run(id);
+    // Finally delete the order itself
+    db.prepare('DELETE FROM orders WHERE id = ?').run(id);
+  });
+  tx();
+  // Sync to Google Sheet if not on Vercel
+  try {
+    const sheets = require('../lib/sheets');
+    if (!process.env.VERCEL) sheets.syncOrdersToSpreadsheet();
+  } catch (e) { console.error('Sheets sync error:', e.message); }
+  res.redirect('/admin/orders?msg=deleted');
+});
 
-// Delete Order (hard delete)\nrouter.post('/orders/:id/delete', async (req, res) => {\n  const { id } = req.params;\n  const db = getDb();\n  const order = db.prepare('SELECT * FROM orders WHERE id = ?').get(id);\n  if (!order) {\n    return res.status(404).send('Pesanan tidak ditemukan.');\n  }\n  const tx = db.transaction(() => {\n    // Delete related items\n    db.prepare('DELETE FROM order_items WHERE order_id = ?').run(id);\n    db.prepare('DELETE FROM payment_submissions WHERE order_id = ?').run(id);\n    db.prepare('DELETE FROM order_status_history WHERE order_id = ?').run(id);\n    // Finally delete the order itself\n    db.prepare('DELETE FROM orders WHERE id = ?').run(id);\n  });\n  tx();\n  // Sync to Google Sheet if not on Vercel\n  try {\n    const sheets = require('../lib/sheets');\n    if (!process.env.VERCEL) sheets.syncOrdersToSpreadsheet();\n  } catch (e) { console.error('Sheets sync error:', e.message); }\n  res.redirect('/admin/orders?msg=deleted');\n});\n
+module.exports = router;

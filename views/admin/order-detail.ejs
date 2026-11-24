@@ -289,6 +289,21 @@
           </form>
         </div>
 
+        <!-- Danger Zone: Delete Order -->
+        <div class="card" style="border: 1px solid #fee2e2; background: #fffafb;">
+          <h2 style="font-size: 16px; margin-bottom: 12px; color: #dc2626; display: flex; align-items: center; gap: 8px;">
+            <span>⚠️</span> Hapus Pesanan (Hard Delete)
+          </h2>
+          <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 14px;">
+            Tindakan ini akan menghapus pesanan beserta semua item, riwayat status, dan bukti pembayaran secara permanen dari database.
+          </p>
+          <form action="/admin/orders/<%= order.id %>/delete" method="POST" onsubmit="return confirm('Apakah Anda yakin ingin MENGHAPUS PERMANEN pesanan <%= order.order_number %> ini? Tindakan ini tidak dapat dibatalkan.');">
+            <button type="submit" class="btn btn-block" style="background: #dc2626; color: #FFF; padding: 10px; font-weight: 700;">
+              🗑️ Hapus Pesanan Ini
+            </button>
+          </form>
+        </div>
+
       </div>
 
     </div>
