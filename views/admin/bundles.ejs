@@ -34,6 +34,10 @@
         <div style="background: #dcfce7; border: 1px solid #86efac; color: #166534; padding: 12px 16px; border-radius: var(--radius-sm); margin-bottom: 20px; font-weight: 700;">
           ✔ Paket bundling baru berhasil dibuat!
         </div>
+      <% } else if (req.query.msg === 'deleted') { %>
+        <div style="background: #fef2f2; border: 1px solid #fecaca; color: #991b1b; padding: 12px 16px; border-radius: var(--radius-sm); margin-bottom: 20px; font-weight: 700;">
+          ✔ Paket bundling berhasil dihapus!
+        </div>
       <% } %>
     <% } %>
 
@@ -99,6 +103,12 @@
                     <form action="/admin/bundles/<%= b.id %>/toggle" method="POST" style="display: inline;">
                       <button type="submit" class="btn btn-outline btn-sm" style="padding: 4px 10px; font-size: 12px;">
                         <%= b.available ? 'Nonaktifkan' : 'Aktifkan' %>
+                      </button>
+                    </form>
+                    <!-- Delete Bundle -->
+                    <form action="/admin/bundles/<%= b.id %>/delete" method="POST" style="display: inline;" onsubmit="return confirm('Apakah Anda yakin ingin menghapus paket bundling <%= b.name %>?');">
+                      <button type="submit" class="btn btn-outline btn-sm" style="padding: 4px 10px; font-size: 12px; border-color: #dc2626; color: #dc2626;" title="Hapus Paket">
+                        🗑️ Hapus
                       </button>
                     </form>
                   </div>

@@ -1,0 +1,154 @@
+{
+  "customer": [
+    {
+      "testName": "Homepage Browsing (/)",
+      "passed": true,
+      "details": "Status 200"
+    },
+    {
+      "testName": "Menu Catalog (/menu) - Prices & Archived Filtering",
+      "passed": true,
+      "details": "Beefy 15k, Cheezy 13k, Kopi hidden"
+    },
+    {
+      "testName": "Product Detail (/product/beefy-nacho) & Rekomendasi Lainnya",
+      "passed": true,
+      "details": "Cheezy Corn present, Kopi excluded"
+    },
+    {
+      "testName": "Product Detail 404 for Non-Existent Product",
+      "passed": true,
+      "details": "Handled cleanly with status 404"
+    },
+    {
+      "testName": "Bundling Detail (/bundle/movie-night-combo)",
+      "passed": true,
+      "details": "Status 200"
+    },
+    {
+      "testName": "About & Packaging Page (/about)",
+      "passed": true,
+      "details": "Status 200"
+    },
+    {
+      "testName": "Cart Validation API (/api/cart/validate) with Voucher & Delivery",
+      "passed": true,
+      "details": "Total Rp40.700 match"
+    },
+    {
+      "testName": "Checkout Form Validation (Empty Name & Missing Address)",
+      "passed": true,
+      "details": "Properly rejected with 400"
+    },
+    {
+      "testName": "Successful Checkout & Order Creation (/checkout)",
+      "passed": "346cdd5f2629f7a0ae32ce14d14e8e91894ba8b1fc2b21b82bde31341c7de6fb",
+      "details": "Order NCH-34913, Token generated"
+    },
+    {
+      "testName": "Order Tracking Page (/order/:token)",
+      "passed": true,
+      "details": "Customer details & QRIS rendered"
+    },
+    {
+      "testName": "Live Order Status Polling (/api/order/:token/status)",
+      "passed": true,
+      "details": "Status NEW / UNPAID verified"
+    },
+    {
+      "testName": "Payment Proof Upload (/order/:token/upload)",
+      "passed": true,
+      "details": "Redirected to uploaded=1, status WAITING_CONFIRMATION"
+    },
+    {
+      "testName": "Empty Payment Proof Upload Handled Gracefully",
+      "passed": true,
+      "details": "Handled with status 400 error page"
+    }
+  ],
+  "admin": [
+    {
+      "testName": "Security: Protected Route Redirects to Login (/admin)",
+      "passed": true,
+      "details": "Redirect 302 to /admin/login"
+    },
+    {
+      "testName": "Authentication: Wrong Credentials Display Error",
+      "passed": true,
+      "details": "Rejected with error message"
+    },
+    {
+      "testName": "Authentication: Valid Login (/admin/login)",
+      "passed": true,
+      "details": "Cookie session issued"
+    },
+    {
+      "testName": "Multi-Tab Navigation (Slash Switching)",
+      "passed": true,
+      "details": "All 7 admin tabs loaded with 200 OK"
+    },
+    {
+      "testName": "Orders Listing (/admin/orders) - Shows Recent Order",
+      "passed": true,
+      "details": "Found order ID: 3"
+    },
+    {
+      "testName": "Order Detail View (/admin/orders/:id)",
+      "passed": true,
+      "details": "Items and customer details rendered"
+    },
+    {
+      "testName": "Verify Payment Action (/admin/orders/:id/verify-payment)",
+      "passed": true,
+      "details": "Payment status transitioned to PAID"
+    },
+    {
+      "testName": "Update Operational Status (/admin/orders/:id/status -> READY)",
+      "passed": true,
+      "details": "Status changed to READY"
+    },
+    {
+      "testName": "Product Create Action (POST /admin/products/new)",
+      "passed": true,
+      "details": "Created ID: 11"
+    },
+    {
+      "testName": "Product Toggle Availability (POST /admin/products/:id/toggle)",
+      "passed": true,
+      "details": "Toggled successfully"
+    },
+    {
+      "testName": "Product Delete / Archive (POST /admin/products/:id/delete)",
+      "passed": true,
+      "details": "Archived successfully"
+    },
+    {
+      "testName": "Hero Carousel Add Slide (POST /admin/carousel/add)",
+      "passed": true,
+      "details": "Slide ID: 4"
+    },
+    {
+      "testName": "Hero Carousel Delete Slide (POST /admin/carousel/:id/delete)",
+      "passed": true,
+      "details": "Slide removed cleanly"
+    },
+    {
+      "testName": "Store Settings Update (POST /admin/settings)",
+      "passed": true,
+      "details": "Phone +6281231777614 saved"
+    },
+    {
+      "testName": "Admin Logout (GET /admin/logout)",
+      "passed": true,
+      "details": "Session terminated, redirected to login"
+    }
+  ],
+  "security": [
+    {
+      "testName": "Strict Revenue Accounting: Only PAID Orders Counted in Revenue",
+      "passed": true,
+      "details": "Strict PAID revenue enforced, UNPAID orders excluded"
+    }
+  ],
+  "bugsFound": []
+}

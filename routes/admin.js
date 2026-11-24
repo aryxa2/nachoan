@@ -237,7 +237,7 @@ router.get('/orders/:id', async (req, res) => {
 // Verify Payment (Accept / Reject)
 router.post('/orders/:id/verify-payment', async (req, res) => {
   const { id } = req.params;
-  const { action, reason, reference } = req.body;
+  const { action, reason, reference } = req.body || {};
   const db = getDb();
   const currentTime = now();
   const adminName = req.session.admin.name || req.session.admin.username;
@@ -874,7 +874,12 @@ router.post('/bundles/new', uploadAdmin.single('bundle_image'), (req, res) => {
     imagePath = `/uploads/${req.file.filename}`;
   }
 
-  const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+  const baseSlug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') || 'bundle';
+  let slug = baseSlug;
+  let suffix = 2;
+  while (db.prepare('SELECT id FROM bundles WHERE slug = ?').get(slug)) {
+    slug = `${baseSlug}-${suffix++}`;
+  }
 
   const createTx = db.transaction(() => {
     const result = db.prepare(`
@@ -977,6 +982,18 @@ router.post('/bundles/:id/toggle', (req, res) => {
   res.redirect('/admin/bundles');
 });
 
+// Delete Bundle (Archive)
+router.post('/bundles/:id/delete', (req, res) => {
+  const db = getDb();
+  db.prepare('UPDATE bundles SET archived = 1, available = 0, updated_at = ? WHERE id = ?')
+    .run(now(), req.params.id);
+  try {
+    const { syncAllToSpreadsheet } = require('../lib/sheets');
+    syncAllToSpreadsheet();
+  } catch (e) {}
+  res.redirect('/admin/bundles?msg=deleted');
+});
+
 // Promos Management
 router.get('/promos', (req, res) => {
   const db = getDb();
@@ -1059,6 +1076,17 @@ router.post('/promos/:id/toggle', (req, res) => {
       .run(promo.active ? 0 : 1, now(), req.params.id);
   }
   res.redirect('/admin/promos');
+});
+
+// Delete Promo
+router.post('/promos/:id/delete', (req, res) => {
+  const db = getDb();
+  db.prepare('DELETE FROM promotions WHERE id = ?').run(req.params.id);
+  try {
+    const { syncAllToSpreadsheet } = require('../lib/sheets');
+    syncAllToSpreadsheet();
+  } catch (e) {}
+  res.redirect('/admin/promos?msg=deleted');
 });
 
 // Store Settings & QRIS

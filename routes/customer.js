@@ -99,7 +99,7 @@ router.get('/product/:slug', async (req, res) => {
     }
   }
 
-  const related = db.prepare('SELECT * FROM products WHERE id != ? AND category_id = ? AND available = 1 LIMIT 3')
+  const related = db.prepare('SELECT * FROM products WHERE id != ? AND category_id = ? AND available = 1 AND archived = 0 LIMIT 3')
     .all(product.id, product.category_id);
 
   res.render('product', {

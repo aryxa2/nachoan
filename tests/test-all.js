@@ -92,10 +92,10 @@ console.log(`✔ Order Number (${ordNum}) and Token (${token.slice(0, 16)}...) v
 
 // 7. Test Phone Normalization
 console.log('\nTest 7: Phone Normalization');
-assert.strictEqual(normalizePhone('081234567890'), '+6281234567890');
-assert.strictEqual(normalizePhone('6281234567890'), '+6281234567890');
-assert.strictEqual(normalizePhone('+6281234567890'), '+6281234567890');
-assert.strictEqual(normalizePhone('0812-3456-7890'), '+6281234567890');
+assert.strictEqual(normalizePhone('081231777614'), '+6281231777614');
+assert.strictEqual(normalizePhone('6281231777614'), '+6281231777614');
+assert.strictEqual(normalizePhone('+6281231777614'), '+6281231777614');
+assert.strictEqual(normalizePhone('0812-3177-7614'), '+6281231777614');
 console.log('✔ Phone normalization verified.');
 
 // 8. Test Verified Revenue in Database

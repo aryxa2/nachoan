@@ -17,6 +17,7 @@
  */
 
 const SPREADSHEET_ID = "1YDenYpVKZVnhv5jBxp4iMdxxLMgHGOSTn3qjkBmEmJ8";
+const FOLDER_ID = "1ov09rQDC59bA_tlw7HpvlpngfPSJgcDT";
 const PROOF_FOLDER_NAME = "NACHOAN - Bukti Pembayaran";
 const PRODUCT_FOLDER_NAME = "NACHOAN - Foto Produk";
 
@@ -33,6 +34,13 @@ function getOrCreateFolder(folderName) {
 }
 
 function getOrCreateProofFolder() {
+  if (FOLDER_ID) {
+    try {
+      return DriveApp.getFolderById(FOLDER_ID);
+    } catch (err) {
+      console.warn("Folder ID fallback to name:", err);
+    }
+  }
   return getOrCreateFolder(PROOF_FOLDER_NAME);
 }
 
@@ -48,6 +56,7 @@ function ensureOrdersProofColumn(oSheet) {
 }
 
 function findOrderRowIndex(oSheet, orderNumber) {
+  if (!orderNumber || String(orderNumber).trim() === "") return -1;
   const data = oSheet.getDataRange().getValues();
   for (let i = 1; i < data.length; i++) {
     if (String(data[i][0]).trim() === String(orderNumber).trim()) {
@@ -353,8 +362,16 @@ function onEdit(e) {
     const range = e.range;
     const sheet = range.getSheet();
     if (sheet.getName() === "Orders" && range.getRow() > 1) {
+      // 1. Jika yang diedit/dihapus adalah kolom 'Terakhir Diperbarui' (kolom 15 / O) itu sendiri, jangan timpa lagi
+      if (range.getColumn() === 15) return;
+
+      const row = range.getRow();
+      // 2. Jangan isi jika baris kosong / No Pesanan (kolom 1 / A) tidak ada
+      const orderNumber = sheet.getRange(row, 1).getValue();
+      if (!orderNumber || String(orderNumber).trim() === "") return;
+
       const nowStr = Utilities.formatDate(new Date(), "Asia/Jakarta", "yyyy-MM-dd HH:mm:ss");
-      sheet.getRange(range.getRow(), 15).setValue(nowStr);
+      sheet.getRange(row, 15).setValue(nowStr);
     }
   } catch (err) {
     // Silent catch

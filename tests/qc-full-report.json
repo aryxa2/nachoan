@@ -1,0 +1,103 @@
+{
+  "productsCRUD": [
+    {
+      "testName": "CREATE Product (POST /admin/products/new)",
+      "passed": true,
+      "details": "Created ID: 10"
+    },
+    {
+      "testName": "READ Product on Customer Menu & Detail",
+      "passed": true,
+      "details": "Visible in /menu and /product/:slug"
+    },
+    {
+      "testName": "UPDATE Product (POST /admin/products/:id/edit)",
+      "passed": true,
+      "details": "Updated to Rp25.000"
+    },
+    {
+      "testName": "TOGGLE Product Availability (POST /admin/products/:id/toggle)",
+      "passed": true,
+      "details": "Status switched to Habis (available = 0)"
+    },
+    {
+      "testName": "DELETE Product (POST /admin/products/:id/delete)",
+      "passed": true,
+      "details": "Archived = 1, hidden from /menu & 404 on detail"
+    }
+  ],
+  "bundlesCRUD": [
+    {
+      "testName": "CREATE Bundle (POST /admin/bundles/new)",
+      "passed": true,
+      "details": "Created ID: 3"
+    },
+    {
+      "testName": "READ Bundle on Customer Menu & Detail",
+      "passed": true,
+      "details": "Visible in /menu#bundling and /bundle/:slug"
+    },
+    {
+      "testName": "UPDATE Bundle (POST /admin/bundles/:id/edit)",
+      "passed": true,
+      "details": "Updated to Rp29.000"
+    },
+    {
+      "testName": "TOGGLE Bundle Availability (POST /admin/bundles/:id/toggle)",
+      "passed": true,
+      "details": "Status switched to Nonaktif"
+    },
+    {
+      "testName": "DELETE Bundle (POST /admin/bundles/:id/delete)",
+      "passed": true,
+      "details": "Archived = 1, removed from /menu & 404 on detail"
+    }
+  ],
+  "promosCRUD": [
+    {
+      "testName": "CREATE Promo Voucher (POST /admin/promos/new)",
+      "passed": true,
+      "details": "Created code QCSPECIAL20, ID: 4"
+    },
+    {
+      "testName": "READ Promo & Validate on Cart (/api/cart/validate)",
+      "passed": true,
+      "details": "20% discount (Rp6.000) applied"
+    },
+    {
+      "testName": "UPDATE Promo (POST /admin/promos/:id/edit)",
+      "passed": true,
+      "details": "Updated code to QCSPECIAL30 (30% = Rp9.000)"
+    },
+    {
+      "testName": "TOGGLE Promo Active (POST /admin/promos/:id/toggle)",
+      "passed": true,
+      "details": "Status switched to Nonaktif"
+    },
+    {
+      "testName": "DELETE Promo (POST /admin/promos/:id/delete)",
+      "passed": true,
+      "details": "Permanently deleted, rejected on cart validation"
+    }
+  ],
+  "customerFlow": [
+    {
+      "testName": "Customer Order Creation & Token Generation",
+      "passed": true,
+      "details": "Order: NCH-10877"
+    },
+    {
+      "testName": "Receipt Access & Payment Proof Upload",
+      "passed": true,
+      "details": "Status transitioned to WAITING_CONFIRMATION"
+    }
+  ],
+  "adminFlow": [
+    {
+      "testName": "Admin Payment Verification & Status Progression to COMPLETED",
+      "passed": true,
+      "details": "Customer live status: PAID & COMPLETED"
+    }
+  ],
+  "allPassed": true
+}

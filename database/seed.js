@@ -119,7 +119,7 @@ function seed() {
   const settings = {
     store_name: 'NACHOAN',
     address: '',
-    phone: '+6281234567890',
+    phone: '+6281231777614',
     hours: 'PO Batch 1 (23-27 Nov) | Next Batch & Expo Coming Soon',
     instagram: '@nachoan_',
     apps_script_url: 'https://script.google.com/macros/s/AKfycbyvsQbsJYl-IEtmkvACoUF6nEfPO8qxolw2SzfWU94seqlki13xFkNlqPm5hFLKFRc/exec',
