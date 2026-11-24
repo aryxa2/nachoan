@@ -149,6 +149,9 @@ router.get('/about', (req, res) => {
   });
 });
 
+// Redirect /products → /menu (alias)
+router.get('/products', (req, res) => res.redirect(301, '/menu'));
+
 // Checkout Page
 router.get('/checkout', (req, res) => {
   const db = getDb();
