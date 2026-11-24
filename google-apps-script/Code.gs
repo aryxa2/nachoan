@@ -127,6 +127,34 @@ function appendOrderToSheet(ss, o, items) {
   return oSheet.getLastRow();
 }
 
+function cleanupOrphanOrderItems(ss) {
+  const oSheet = ss.getSheetByName("Orders");
+  const oiSheet = ss.getSheetByName("OrderItems");
+  if (!oSheet || !oiSheet) return 0;
+  
+  const oData = oSheet.getDataRange().getValues();
+  const validOrders = new Set();
+  for (let i = 1; i < oData.length; i++) {
+    const num = String(oData[i][0]).trim();
+    const payStatus = String(oData[i][11] || "").trim().toUpperCase();
+    const orderStatus = String(oData[i][12] || "").trim().toUpperCase();
+    if (num && payStatus !== "DELETED" && orderStatus !== "DELETED") {
+      validOrders.add(num);
+    }
+  }
+
+  const oiData = oiSheet.getDataRange().getValues();
+  let cleaned = 0;
+  for (let r = oiData.length - 1; r >= 1; r--) {
+    const itemOrderNum = String(oiData[r][1] || "").trim();
+    if (itemOrderNum && !validOrders.has(itemOrderNum)) {
+      oiSheet.deleteRow(r + 1);
+      cleaned++;
+    }
+  }
+  return cleaned;
+}
+
 function sheetToObjects(sheet) {
   if (!sheet) return [];
   const data = sheet.getDataRange().getValues();
@@ -173,6 +201,15 @@ function doGet(e) {
 
     if (action === "getDeliveryZones") {
       return jsonResponse({ success: true, data: sheetToObjects(ss.getSheetByName("DeliveryZones")) });
+    }
+
+    if (action === "getOrderItems") {
+      return jsonResponse({ success: true, data: sheetToObjects(ss.getSheetByName("OrderItems")) });
+    }
+
+    if (action === "cleanOrphanOrderItems" || action === "cleanupOrderItems") {
+      const count = cleanupOrphanOrderItems(ss);
+      return jsonResponse({ success: true, cleanedCount: count });
     }
 
     if (action === "getSettings") {
@@ -280,6 +317,7 @@ function doPost(e) {
     // 3. Update Order Status
     if (action === "updateOrderStatus") {
       const oSheet = ss.getSheetByName("Orders");
+      const oiSheet = ss.getSheetByName("OrderItems");
       const orderNum = payload.order_number;
       const nowStr = Utilities.formatDate(new Date(), "Asia/Jakarta", "yyyy-MM-dd HH:mm:ss");
       const rowIdx = oSheet ? findOrderRowIndex(oSheet, orderNum) : -1;
@@ -292,6 +330,16 @@ function doPost(e) {
           oSheet.getRange(rowIdx, 13).setValue(payload.order_status);
         }
         oSheet.getRange(rowIdx, 15).setValue(nowStr);
+
+        // Jika status DELETED, bersihkan juga baris item terkait di sheet OrderItems
+        if (payload.order_status === "DELETED" && oiSheet) {
+          const oiData = oiSheet.getDataRange().getValues();
+          for (let r = oiData.length - 1; r >= 1; r--) {
+            if (String(oiData[r][1]).trim() === String(orderNum).trim()) {
+              oiSheet.deleteRow(r + 1);
+            }
+          }
+        }
 
         return jsonResponse({ success: true, message: `Pesanan ${orderNum} berhasil diperbarui di spreadsheet.` });
       }

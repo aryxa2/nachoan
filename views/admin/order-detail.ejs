@@ -236,7 +236,7 @@
                     <label class="form-label" style="font-size: 12px;">Ref Transaksi / Rekening (Opsional):</label>
                     <input type="text" name="reference" class="form-control" placeholder="Contoh: BCA-948271" style="font-size: 13px; padding: 8px 12px;">
                   </div>
-                  <button type="submit" class="btn btn-block" style="background: #166534; color: #FFF; padding: 12px;" onclick="return confirm('Apakah Anda yakin dana sebesar <%= formatRupiah(order.total) %> telah masuk ke rekening?')">
+                  <button type="button" class="btn btn-block" style="background: #166534; color: #FFF; padding: 12px; font-weight: 700;" onclick="confirmApprovePayment(event)">
                     ✔ Terima & Verifikasi Pembayaran
                   </button>
                 </form>
@@ -297,8 +297,8 @@
           <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 14px;">
             Tindakan ini akan menghapus pesanan beserta semua item, riwayat status, dan bukti pembayaran secara permanen dari database.
           </p>
-          <form action="/admin/orders/<%= order.order_number %>/delete" method="POST" onsubmit="return confirm('Apakah Anda yakin ingin MENGHAPUS PERMANEN pesanan <%= order.order_number %> ini? Tindakan ini tidak dapat dibatalkan.');">
-            <button type="submit" class="btn btn-block" style="background: #dc2626; color: #FFF; padding: 10px; font-weight: 700;">
+          <form id="delete-single-order-form" action="/admin/orders/<%= order.order_number %>/delete" method="POST">
+            <button type="button" class="btn btn-block" style="background: #dc2626; color: #FFF; padding: 10px; font-weight: 700;" onclick="confirmDeleteOrder()">
               🗑️ Hapus Pesanan Ini
             </button>
           </form>
@@ -336,6 +336,32 @@
     </form>
   </div>
 </div>
+
+<script>
+  async function confirmApprovePayment(e) {
+    const ok = await showConfirm('Apakah Anda yakin dana sebesar <%= formatRupiah(order.total) %> telah masuk ke rekening / QRIS merchant?', {
+      title: 'Verifikasi Pembayaran',
+      confirmText: 'Ya, Setujui',
+      danger: false
+    });
+    if (ok) {
+      showLoading('Memverifikasi...', 'Sedang memperbarui status pembayaran di database dan Google Sheets...');
+      e.target.closest('form').submit();
+    }
+  }
+
+  async function confirmDeleteOrder() {
+    const ok = await showConfirm('Apakah Anda yakin ingin MENGHAPUS PERMANEN pesanan <%= order.order_number %> ini? Seluruh item pada sheet OrderItems dan pesanan di Google Sheets juga akan dihapus permanen.', {
+      title: 'Hapus Pesanan Permanen',
+      confirmText: 'Ya, Hapus Permanen',
+      danger: true
+    });
+    if (ok) {
+      showLoading('Menghapus Pesanan...', 'Sedang menghapus pesanan <%= order.order_number %> dan membersihkan sheet OrderItems di Google Sheets...');
+      document.getElementById('delete-single-order-form').submit();
+    }
+  }
+</script>
 
 <style>
 @media (min-width: 900px) {

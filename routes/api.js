@@ -34,10 +34,21 @@ router.get('/order/:token/status', async (req, res) => {
 });
 
 // Cart & promo calculation endpoint
-router.post('/cart/validate', (req, res) => {
+router.post('/cart/validate', async (req, res) => {
   try {
     const { items = [], promoCode = null, method = 'pickup', zoneId = null } = req.body;
-    const result = calculateCart(items, { promoCode, method, zoneId });
+    const sheets = require('../lib/sheets');
+    try {
+      await sheets.syncCatalogFromAppsScriptIfVercel();
+    } catch (e) {}
+
+    let result = calculateCart(items, { promoCode, method, zoneId });
+    if (!result.valid && Array.isArray(items) && items.length > 0) {
+      try {
+        await sheets.syncCatalogFromAppsScriptIfVercel(true);
+        result = calculateCart(items, { promoCode, method, zoneId });
+      } catch (e) {}
+    }
     res.json({ success: true, data: result });
   } catch (err) {
     console.error('Cart calculation error:', err);

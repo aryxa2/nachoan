@@ -153,7 +153,12 @@ router.get('/about', (req, res) => {
 router.get('/products', (req, res) => res.redirect(301, '/menu'));
 
 // Checkout Page
-router.get('/checkout', (req, res) => {
+router.get('/checkout', async (req, res) => {
+  try {
+    const sheets = require('../lib/sheets');
+    await sheets.syncCatalogFromAppsScriptIfVercel();
+  } catch (e) {}
+
   const db = getDb();
   const deliveryZones = db.prepare('SELECT * FROM delivery_zones WHERE active = 1 ORDER BY id ASC').all();
 
@@ -166,6 +171,7 @@ router.get('/checkout', (req, res) => {
 // Process Checkout
 router.post('/checkout', async (req, res) => {
   const db = getDb();
+  const sheets = require('../lib/sheets');
   const {
     customer_name,
     customer_phone,
@@ -178,6 +184,11 @@ router.post('/checkout', async (req, res) => {
     promo_code,
     idempotency_key
   } = req.body;
+
+  // Sync catalog to ensure newly added products from Sheets are available in SQLite
+  try {
+    await sheets.syncCatalogFromAppsScriptIfVercel();
+  } catch (e) {}
 
   // Validation
   if (!customer_name || !customer_name.trim()) {
@@ -215,11 +226,23 @@ router.post('/checkout', async (req, res) => {
   }
 
   // Authoritative server-side cart & promo calculation
-  const calc = calculateCart(cartItems, {
+  let calc = calculateCart(cartItems, {
     promoCode: promo_code,
     method: method || 'pickup',
     zoneId: delivery_zone_id ? parseInt(delivery_zone_id, 10) : null
   });
+
+  // If calculation failed, force a fresh catalog pull once and recalculate
+  if (!calc.valid && Array.isArray(cartItems) && cartItems.length > 0) {
+    try {
+      await sheets.syncCatalogFromAppsScriptIfVercel(true);
+      calc = calculateCart(cartItems, {
+        promoCode: promo_code,
+        method: method || 'pickup',
+        zoneId: delivery_zone_id ? parseInt(delivery_zone_id, 10) : null
+      });
+    } catch (e) {}
+  }
 
   if (!calc.valid || calc.items.length === 0) {
     return res.status(400).json({

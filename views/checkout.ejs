@@ -31,7 +31,7 @@
                   style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px; border-bottom: 1px solid var(--border-color); padding-bottom: 12px;">
                   <h2 style="font-size: 20px; color: var(--text-dark);">Daftar Pesanan</h2>
                   <button type="button" class="btn btn-outline btn-sm"
-                    onclick="Cart.clear(); window.location.reload();">
+                    onclick="confirmClearCart()">
                     Kosongkan
                   </button>
                 </div>
@@ -385,6 +385,18 @@
       recalculate();
     }
 
+    async function confirmClearCart() {
+      const ok = await showConfirm('Apakah Anda yakin ingin mengosongkan seluruh isi keranjang belanja?', {
+        title: 'Kosongkan Keranjang',
+        confirmText: 'Ya, Kosongkan',
+        danger: true
+      });
+      if (ok) {
+        Cart.clear();
+        window.location.reload();
+      }
+    }
+
     // Form Submission
     document.addEventListener('DOMContentLoaded', () => {
       recalculate();
@@ -401,21 +413,23 @@
         const zoneId = currentMethod === 'delivery' && zoneSelect ? zoneSelect.value : null;
 
         if (!name) {
-          alert('Nama pemesan wajib diisi.');
+          showAlert('Nama lengkap pemesan wajib diisi.', { type: 'warning', title: 'Data Belum Lengkap' });
           return;
         }
         if (!phone) {
-          alert('Nomor WhatsApp wajib diisi.');
+          showAlert('Nomor WhatsApp / HP wajib diisi.', { type: 'warning', title: 'Data Belum Lengkap' });
           return;
         }
         if (currentMethod === 'delivery' && !address) {
-          alert('Alamat pengantaran wajib diisi untuk delivery.');
+          showAlert('Alamat pengantaran wajib diisi untuk layanan delivery.', { type: 'warning', title: 'Data Belum Lengkap' });
           return;
         }
 
         const submitBtn = document.getElementById('submit-order-btn');
         submitBtn.disabled = true;
         submitBtn.textContent = 'Memproses Pesanan...';
+
+        showLoading('Memproses Pesanan...', 'Sedang memvalidasi menu dan menyiapkan kode pesanan QRIS...');
 
         const idempotencyKey = getIdempotencyKey();
 
@@ -441,15 +455,20 @@
             // Clear cart and idempotency key
             Cart.clear();
             sessionStorage.removeItem('nachoan_idempotency_key');
-            window.location.href = data.redirect;
+            showLoading('Pesanan Berhasil Dibuat! 🎉', 'Mengarahkan ke halaman instruksi pembayaran QRIS...');
+            setTimeout(() => {
+              window.location.href = data.redirect;
+            }, 600);
           } else {
-            alert(data.message || 'Gagal memproses pesanan.');
+            hideLoading();
+            showAlert(data.message || 'Gagal memproses pesanan.', { type: 'error', title: 'Pesanan Belum Berhasil' });
             submitBtn.disabled = false;
             submitBtn.textContent = '🌮 Lanjut ke Pembayaran QRIS ›';
           }
         } catch (err) {
           console.error('Submit error', err);
-          alert('Terjadi kesalahan koneksi server.');
+          hideLoading();
+          showAlert('Terjadi kesalahan koneksi server saat memproses pesanan.', { type: 'error' });
           submitBtn.disabled = false;
           submitBtn.textContent = '🌮 Lanjut ke Pembayaran QRIS ›';
         }

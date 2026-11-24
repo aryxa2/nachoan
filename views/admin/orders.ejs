@@ -355,7 +355,7 @@
   async function syncFromSheets() {
     const btn = document.getElementById('btn-sync-from');
     btn.disabled = true;
-    btn.textContent = '🔄 Menarik Data...';
+    showLoading('Menarik Data dari Google Sheets...', 'Sedang menyinkronkan pesanan dan status terbaru dari Google Spreadsheet...');
 
     try {
       const res = await fetch('/admin/orders/sync-from-sheets', {
@@ -363,18 +363,18 @@
         headers: { 'Accept': 'application/json' }
       });
       const data = await res.json();
+      hideLoading();
       if (data.success) {
-        showToast(data.message || 'Sinkronisasi dari Google Sheets berhasil!', true);
-        setTimeout(() => window.location.reload(), 1200);
+        await showAlert(data.message || 'Sinkronisasi dari Google Sheets berhasil!', { type: 'success', title: 'Sinkronisasi Sukses' });
+        window.location.reload();
       } else {
-        showToast(data.message || 'Gagal menarik data dari Google Sheets.', false);
+        await showAlert(data.message || 'Gagal menarik data dari Google Sheets.', { type: 'error', title: 'Gagal Sinkronisasi' });
         btn.disabled = false;
-        btn.textContent = '🔄 Tarik dari Spreadsheet';
       }
     } catch (err) {
-      showToast('Terjadi kesalahan jaringan saat sync.', false);
+      hideLoading();
+      await showAlert('Terjadi kesalahan jaringan saat sinkronisasi.', { type: 'error' });
       btn.disabled = false;
-      btn.textContent = '🔄 Tarik dari Spreadsheet';
     }
   }
 
@@ -382,7 +382,7 @@
   async function syncToSheets() {
     const btn = document.getElementById('btn-sync-to');
     btn.disabled = true;
-    btn.textContent = '☁️ Mengirim...';
+    showLoading('Mengirim ke Google Sheets...', 'Sedang mengunggah seluruh data pesanan & menu ke Google Spreadsheet...');
 
     try {
       const res = await fetch('/admin/orders/sync-to-sheets', {
@@ -390,38 +390,46 @@
         headers: { 'Accept': 'application/json' }
       });
       const data = await res.json();
+      hideLoading();
       if (data.success) {
-        showToast(data.message || 'Data berhasil dikirim ke Google Sheets!', true);
+        await showAlert(data.message || 'Data berhasil dikirim ke Google Sheets!', { type: 'success', title: 'Sinkronisasi Sukses' });
       } else {
-        showToast(data.message || 'Gagal mengirim ke Google Sheets.', false);
+        await showAlert(data.message || 'Gagal mengirim ke Google Sheets.', { type: 'error' });
       }
     } catch (err) {
-      showToast('Terjadi kesalahan jaringan.', false);
+      hideLoading();
+      await showAlert('Terjadi kesalahan jaringan.', { type: 'error' });
     } finally {
       btn.disabled = false;
-      btn.textContent = '☁️ Kirim ke Spreadsheet';
     }
   }
 
   // Reset all
   async function confirmResetAll() {
-    const ok = confirm('PERHATIAN: Ini akan mereset data pesanan dari awal dan menyiapkan format kolom rapi baru di Google Spreadsheet. Lanjutkan?');
+    const ok = await showConfirm('PERHATIAN: Ini akan mereset data pesanan dari awal dan menyiapkan format kolom rapi baru di Google Spreadsheet. Lanjutkan?', {
+      title: 'Reset Pesanan & Spreadsheet',
+      confirmText: 'Ya, Reset dari Awal',
+      danger: true
+    });
     if (!ok) return;
 
+    showLoading('Mereset Data...', 'Sedang mereset pesanan dan menyiapkan format tabel baru di Spreadsheet...');
     try {
       const res = await fetch('/admin/orders/reset-all', {
         method: 'POST',
         headers: { 'Accept': 'application/json' }
       });
       const data = await res.json();
+      hideLoading();
       if (data.success) {
-        alert(data.message);
+        await showAlert(data.message, { type: 'success', title: 'Reset Berhasil' });
         window.location.reload();
       } else {
-        alert('Gagal reset: ' + data.message);
+        await showAlert('Gagal reset: ' + data.message, { type: 'error' });
       }
     } catch (err) {
-      alert('Kesalahan jaringan saat reset.');
+      hideLoading();
+      await showAlert('Kesalahan jaringan saat reset.', { type: 'error' });
     }
   }
 
@@ -461,15 +469,16 @@
 
   async function applyBulkUpdate() {
     const ids = getSelectedIds();
-    if (ids.length === 0) return alert('Pilih minimal satu pesanan.');
+    if (ids.length === 0) return showAlert('Pilih minimal satu pesanan.', { type: 'warning' });
 
     const orderStatus = document.getElementById('bulk-order-status').value;
     const paymentStatus = document.getElementById('bulk-payment-status').value;
 
     if (!orderStatus && !paymentStatus) {
-      return alert('Pilih minimal satu perubahan status (Status Pesanan atau Status Pembayaran).');
+      return showAlert('Pilih minimal satu perubahan status (Status Pesanan atau Status Pembayaran).', { type: 'warning' });
     }
 
+    showLoading('Memperbarui Status...', `Sedang memperbarui ${ids.length} pesanan dan menyinkronkan ke Google Sheets...`);
     try {
       const res = await fetch('/admin/orders/bulk-update', {
         method: 'POST',
@@ -484,24 +493,31 @@
         })
       });
       const data = await res.json();
+      hideLoading();
       if (data.success) {
-        showToast(data.message, true);
-        setTimeout(() => window.location.reload(), 800);
+        await showAlert(data.message, { type: 'success', title: 'Pembaruan Berhasil' });
+        window.location.reload();
       } else {
-        alert(data.message || 'Gagal memperbarui pesanan.');
+        await showAlert(data.message || 'Gagal memperbarui pesanan.', { type: 'error' });
       }
     } catch (err) {
-      alert('Terjadi kesalahan jaringan.');
+      hideLoading();
+      await showAlert('Terjadi kesalahan jaringan.', { type: 'error' });
     }
   }
 
   async function applyBulkDelete() {
     const ids = getSelectedIds();
-    if (ids.length === 0) return alert('Pilih minimal satu pesanan.');
+    if (ids.length === 0) return showAlert('Pilih minimal satu pesanan.', { type: 'warning' });
 
-    const ok = confirm(`Hapus permanen ${ids.length} pesanan terpilih?`);
+    const ok = await showConfirm(`Hapus permanen ${ids.length} pesanan terpilih? Seluruh item pada sheet OrderItem dan pesanan di Google Sheets juga akan dihapus.`, {
+      title: 'Hapus Pesanan Terpilih',
+      confirmText: `Ya, Hapus ${ids.length} Pesanan`,
+      danger: true
+    });
     if (!ok) return;
 
+    showLoading('Menghapus Pesanan...', `Sedang menghapus ${ids.length} pesanan dan membersihkan sheet OrderItems di Google Sheets...`);
     try {
       const res = await fetch('/admin/orders/bulk-delete', {
         method: 'POST',
@@ -512,21 +528,28 @@
         body: JSON.stringify({ order_ids: ids })
       });
       const data = await res.json();
+      hideLoading();
       if (data.success) {
-        showToast(data.message, true);
-        setTimeout(() => window.location.reload(), 800);
+        await showAlert(data.message, { type: 'success', title: 'Pesanan Dihapus' });
+        window.location.reload();
       } else {
-        alert(data.message || 'Gagal menghapus pesanan.');
+        await showAlert(data.message || 'Gagal menghapus pesanan.', { type: 'error' });
       }
     } catch (err) {
-      alert('Terjadi kesalahan jaringan.');
+      hideLoading();
+      await showAlert('Terjadi kesalahan jaringan.', { type: 'error' });
     }
   }
 
   async function deleteCancelledOrders() {
-    const ok = confirm('Hapus permanen seluruh pesanan yang dibatalkan (CANCELLED)? Tindakan ini tidak dapat dibatalkan.');
+    const ok = await showConfirm('Hapus permanen seluruh pesanan yang dibatalkan (CANCELLED)? Seluruh data terkait pada sheet OrderItem di Google Sheets juga akan ikut dihapus.', {
+      title: 'Hapus Pesanan Batal',
+      confirmText: 'Ya, Hapus Semua Pesanan Batal',
+      danger: true
+    });
     if (!ok) return;
 
+    showLoading('Menghapus Pesanan Batal...', 'Sedang menghapus pesanan yang dibatalkan dari Google Sheets dan database...');
     try {
       const res = await fetch('/admin/orders/delete-cancelled', {
         method: 'POST',
@@ -536,14 +559,16 @@
         }
       });
       const data = await res.json();
+      hideLoading();
       if (data.success) {
-        showToast(data.message, true);
-        setTimeout(() => window.location.reload(), 800);
+        await showAlert(data.message, { type: 'success', title: 'Pesanan Batal Dihapus' });
+        window.location.reload();
       } else {
-        alert(data.message || 'Gagal menghapus pesanan batal.');
+        await showAlert(data.message || 'Gagal menghapus pesanan batal.', { type: 'error' });
       }
     } catch (err) {
-      alert('Terjadi kesalahan jaringan.');
+      hideLoading();
+      await showAlert('Terjadi kesalahan jaringan.', { type: 'error' });
     }
   }
 
@@ -588,12 +613,12 @@
     });
 
     if (items.length === 0) {
-      return alert('Pilih minimal 1 item menu.');
+      return showAlert('Pilih minimal 1 item menu.', { type: 'warning' });
     }
 
     const btn = document.getElementById('btn-save-manual');
     btn.disabled = true;
-    btn.textContent = 'Menyimpan...';
+    showLoading('Membuat Pesanan...', 'Sedang menyimpan pesanan manual dan menyinkronkan ke Google Sheets...');
 
     try {
       const res = await fetch('/admin/orders/create-manual', {
@@ -614,16 +639,18 @@
         })
       });
       const data = await res.json();
+      hideLoading();
       if (data.success) {
-        alert(data.message);
+        await showAlert(data.message, { type: 'success', title: 'Pesanan Berhasil Dibuat' });
         window.location.reload();
       } else {
-        alert(data.message || 'Gagal membuat pesanan manual.');
+        await showAlert(data.message || 'Gagal membuat pesanan manual.', { type: 'error' });
         btn.disabled = false;
         btn.textContent = 'Simpan & Sync ke Sheets ›';
       }
     } catch (err) {
-      alert('Terjadi kesalahan koneksi.');
+      hideLoading();
+      await showAlert('Terjadi kesalahan koneksi server.', { type: 'error' });
       btn.disabled = false;
       btn.textContent = 'Simpan & Sync ke Sheets ›';
     }

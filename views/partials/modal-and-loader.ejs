@@ -1,0 +1,454 @@
+<!-- NACHOAN Global Custom Modal & Loading Animation System -->
+<style>
+  /* Dialog & Modal Backdrop */
+  .nachoan-dialog-backdrop {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(15, 23, 42, 0.65);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    z-index: 999999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+    box-sizing: border-box;
+    opacity: 0;
+    transition: opacity 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .nachoan-dialog-backdrop.active {
+    opacity: 1;
+  }
+
+  /* Dialog Card */
+  .nachoan-dialog-card {
+    background: #FFFFFF;
+    border-radius: 20px;
+    max-width: 440px;
+    width: 100%;
+    padding: 28px 24px;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25), 0 0 0 1px rgba(0, 0, 0, 0.05);
+    text-align: center;
+    transform: scale(0.92) translateY(12px);
+    transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    box-sizing: border-box;
+    position: relative;
+    overflow: hidden;
+  }
+  .nachoan-dialog-backdrop.active .nachoan-dialog-card {
+    transform: scale(1) translateY(0);
+  }
+
+  /* Dialog Icon */
+  .nachoan-dialog-icon {
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    margin: 0 auto 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 32px;
+    position: relative;
+    animation: nachoanBounceIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  }
+  .nachoan-dialog-icon.success {
+    background: #DCFCE7;
+    color: #16A34A;
+    box-shadow: 0 0 0 8px #F0FDF4;
+  }
+  .nachoan-dialog-icon.error {
+    background: #FEE2E2;
+    color: #DC2626;
+    box-shadow: 0 0 0 8px #FEF2F2;
+  }
+  .nachoan-dialog-icon.warning {
+    background: #FEF3C7;
+    color: #D97706;
+    box-shadow: 0 0 0 8px #FFFBEB;
+  }
+  .nachoan-dialog-icon.info {
+    background: #E0E7FF;
+    color: #4F46E5;
+    box-shadow: 0 0 0 8px #EEF2FF;
+  }
+
+  .nachoan-dialog-title {
+    font-family: inherit;
+    font-size: 20px;
+    font-weight: 800;
+    color: #111827;
+    margin: 0 0 8px;
+    line-height: 1.3;
+  }
+
+  .nachoan-dialog-message {
+    font-size: 14px;
+    color: #4B5563;
+    line-height: 1.55;
+    margin: 0 0 24px;
+    word-break: break-word;
+  }
+
+  .nachoan-dialog-actions {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+  }
+
+  .nachoan-btn {
+    flex: 1;
+    padding: 12px 20px;
+    border-radius: 12px;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    border: none;
+    transition: all 0.2s ease;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    outline: none;
+    font-family: inherit;
+  }
+  .nachoan-btn:active {
+    transform: scale(0.97);
+  }
+
+  .nachoan-btn-primary {
+    background: #E63946;
+    color: #FFFFFF;
+    box-shadow: 0 4px 12px rgba(230, 57, 70, 0.25);
+  }
+  .nachoan-btn-primary:hover {
+    background: #D62839;
+    box-shadow: 0 6px 16px rgba(230, 57, 70, 0.35);
+  }
+
+  .nachoan-btn-danger {
+    background: #DC2626;
+    color: #FFFFFF;
+    box-shadow: 0 4px 12px rgba(220, 38, 38, 0.25);
+  }
+  .nachoan-btn-danger:hover {
+    background: #B91C1C;
+    box-shadow: 0 6px 16px rgba(220, 38, 38, 0.35);
+  }
+
+  .nachoan-btn-secondary {
+    background: #F3F4F6;
+    color: #374151;
+    border: 1px solid #E5E7EB;
+  }
+  .nachoan-btn-secondary:hover {
+    background: #E5E7EB;
+    color: #1F2937;
+  }
+
+  /* Loading Overlay */
+  .nachoan-loading-backdrop {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(15, 23, 42, 0.72);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    z-index: 1000000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+    box-sizing: border-box;
+    opacity: 0;
+    transition: opacity 0.25s ease;
+  }
+  .nachoan-loading-backdrop.active {
+    opacity: 1;
+  }
+
+  .nachoan-loading-card {
+    background: #FFFFFF;
+    border-radius: 24px;
+    padding: 36px 32px;
+    max-width: 380px;
+    width: 100%;
+    text-align: center;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.35);
+    box-sizing: border-box;
+    transform: scale(0.9);
+    transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .nachoan-loading-backdrop.active .nachoan-loading-card {
+    transform: scale(1);
+  }
+
+  /* Animated Culinary Spinner */
+  .nachoan-spinner-wrapper {
+    position: relative;
+    width: 80px;
+    height: 80px;
+    margin: 0 auto 20px;
+  }
+  .nachoan-spinner-track {
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    border: 4px solid #FEE2E2;
+  }
+  .nachoan-spinner-orbit {
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    border: 4px solid transparent;
+    border-top-color: #E63946;
+    border-right-color: #F59E0B;
+    animation: nachoanSpin 1s cubic-bezier(0.55, 0.15, 0.45, 0.85) infinite;
+  }
+  .nachoan-spinner-center {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 34px;
+    animation: nachoanPulseIcon 1.2s ease-in-out infinite alternate;
+  }
+
+  .nachoan-loading-title {
+    font-size: 19px;
+    font-weight: 800;
+    color: #111827;
+    margin: 0 0 8px;
+    letter-spacing: -0.01em;
+  }
+  .nachoan-loading-subtitle {
+    font-size: 13.5px;
+    color: #6B7280;
+    line-height: 1.5;
+    margin: 0;
+  }
+
+  /* Animations */
+  @keyframes nachoanSpin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+  }
+  @keyframes nachoanPulseIcon {
+    from { transform: scale(0.85); }
+    to { transform: scale(1.15); }
+  }
+  @keyframes nachoanBounceIn {
+    0% { transform: scale(0.3); opacity: 0; }
+    70% { transform: scale(1.1); }
+    100% { transform: scale(1); opacity: 1; }
+  }
+</style>
+
+<!-- Dialog Markup -->
+<div id="nachoan-dialog-backdrop" class="nachoan-dialog-backdrop" style="display: none;" role="dialog" aria-modal="true">
+  <div class="nachoan-dialog-card">
+    <div id="nachoan-dialog-icon" class="nachoan-dialog-icon info">ℹ️</div>
+    <h3 id="nachoan-dialog-title" class="nachoan-dialog-title">Notifikasi</h3>
+    <p id="nachoan-dialog-message" class="nachoan-dialog-message">Pesan</p>
+    <div id="nachoan-dialog-actions" class="nachoan-dialog-actions">
+      <button type="button" id="nachoan-dialog-cancel-btn" class="nachoan-btn nachoan-btn-secondary" style="display: none;">Batal</button>
+      <button type="button" id="nachoan-dialog-confirm-btn" class="nachoan-btn nachoan-btn-primary">OK</button>
+    </div>
+  </div>
+</div>
+
+<!-- Loading Overlay Markup -->
+<div id="nachoan-loading-backdrop" class="nachoan-loading-backdrop" style="display: none;" role="status" aria-live="polite">
+  <div class="nachoan-loading-card">
+    <div class="nachoan-spinner-wrapper">
+      <div class="nachoan-spinner-track"></div>
+      <div class="nachoan-spinner-orbit"></div>
+      <div class="nachoan-spinner-center">🌮</div>
+    </div>
+    <h4 id="nachoan-loading-title" class="nachoan-loading-title">Memproses...</h4>
+    <p id="nachoan-loading-subtitle" class="nachoan-loading-subtitle">Mohon tunggu sebentar...</p>
+  </div>
+</div>
+
+<script>
+(function() {
+  const dialogBackdrop = document.getElementById('nachoan-dialog-backdrop');
+  const dialogIcon = document.getElementById('nachoan-dialog-icon');
+  const dialogTitle = document.getElementById('nachoan-dialog-title');
+  const dialogMsg = document.getElementById('nachoan-dialog-message');
+  const dialogCancelBtn = document.getElementById('nachoan-dialog-cancel-btn');
+  const dialogConfirmBtn = document.getElementById('nachoan-dialog-confirm-btn');
+
+  const loadingBackdrop = document.getElementById('nachoan-loading-backdrop');
+  const loadingTitle = document.getElementById('nachoan-loading-title');
+  const loadingSubtitle = document.getElementById('nachoan-loading-subtitle');
+
+  let currentResolver = null;
+
+  function closeDialog(result) {
+    if (!dialogBackdrop) return;
+    dialogBackdrop.classList.remove('active');
+    setTimeout(() => {
+      dialogBackdrop.style.display = 'none';
+      if (typeof currentResolver === 'function') {
+        const res = currentResolver;
+        currentResolver = null;
+        res(result);
+      }
+    }, 200);
+  }
+
+  dialogCancelBtn.addEventListener('click', () => closeDialog(false));
+  dialogConfirmBtn.addEventListener('click', () => closeDialog(true));
+
+  // Close on backdrop click for alert, but not confirm
+  dialogBackdrop.addEventListener('click', (e) => {
+    if (e.target === dialogBackdrop) {
+      if (dialogCancelBtn.style.display === 'none') {
+        closeDialog(true);
+      }
+    }
+  });
+
+  // ESC key
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && dialogBackdrop.style.display !== 'none') {
+      if (dialogCancelBtn.style.display !== 'none') {
+        closeDialog(false);
+      } else {
+        closeDialog(true);
+      }
+    }
+  });
+
+  /**
+   * Menampilkan alert pop up menarik
+   * @param {string} message - Pesan notifikasi
+   * @param {object} options - { title, type: 'success'|'error'|'warning'|'info', buttonText }
+   */
+  window.showAlert = function(message, options = {}) {
+    return new Promise((resolve) => {
+      currentResolver = resolve;
+      const type = options.type || (message && (message.toLowerCase().includes('berhasil') || message.toLowerCase().includes('sukses')) ? 'success' : 'info');
+      
+      const icons = {
+        success: '🎉',
+        error: '⚠️',
+        warning: '🔔',
+        info: 'ℹ️'
+      };
+      
+      dialogIcon.className = `nachoan-dialog-icon ${type}`;
+      dialogIcon.textContent = icons[type] || '🌮';
+
+      dialogTitle.textContent = options.title || (type === 'success' ? 'Sukses!' : (type === 'error' ? 'Perhatian' : 'Informasi'));
+      dialogMsg.textContent = String(message || '');
+      
+      dialogCancelBtn.style.display = 'none';
+      dialogConfirmBtn.textContent = options.buttonText || 'OK, Mengerti';
+      dialogConfirmBtn.className = type === 'error' ? 'nachoan-btn nachoan-btn-danger' : 'nachoan-btn nachoan-btn-primary';
+
+      dialogBackdrop.style.display = 'flex';
+      // Reflow for transition
+      void dialogBackdrop.offsetWidth;
+      dialogBackdrop.classList.add('active');
+      dialogConfirmBtn.focus();
+    });
+  };
+
+  /**
+   * Menampilkan konfirmasi dialog interaktif menarik
+   * @param {string} message - Pesan pertanyaan konfirmasi
+   * @param {object} options - { title, confirmText, cancelText, danger: true|false }
+   */
+  window.showConfirm = function(message, options = {}) {
+    return new Promise((resolve) => {
+      currentResolver = resolve;
+      const isDanger = options.danger !== false;
+
+      dialogIcon.className = `nachoan-dialog-icon ${isDanger ? 'warning' : 'info'}`;
+      dialogIcon.textContent = isDanger ? '⚠️' : '❓';
+
+      dialogTitle.textContent = options.title || 'Konfirmasi Tindakan';
+      dialogMsg.textContent = String(message || '');
+
+      dialogCancelBtn.style.display = 'inline-flex';
+      dialogCancelBtn.textContent = options.cancelText || 'Batal';
+
+      dialogConfirmBtn.textContent = options.confirmText || (isDanger ? 'Ya, Lanjutkan' : 'Ya');
+      dialogConfirmBtn.className = isDanger ? 'nachoan-btn nachoan-btn-danger' : 'nachoan-btn nachoan-btn-primary';
+
+      dialogBackdrop.style.display = 'flex';
+      void dialogBackdrop.offsetWidth;
+      dialogBackdrop.classList.add('active');
+      dialogConfirmBtn.focus();
+    });
+  };
+
+  /**
+   * Menampilkan animasi loading dengan pesan informatif
+   * @param {string} title - Judul loading
+   * @param {string} subtitle - Rincian proses
+   */
+  window.showLoading = function(title = 'Memproses Pesanan...', subtitle = 'Sedang menghubungkan ke server NACHOAN, mohon tunggu sebentar...') {
+    if (!loadingBackdrop) return;
+    loadingTitle.textContent = title;
+    loadingSubtitle.textContent = subtitle;
+    loadingBackdrop.style.display = 'flex';
+    void loadingBackdrop.offsetWidth;
+    loadingBackdrop.classList.add('active');
+  };
+
+  /**
+   * Menutup animasi loading
+   */
+  window.hideLoading = function() {
+    if (!loadingBackdrop) return;
+    loadingBackdrop.classList.remove('active');
+    setTimeout(() => {
+      loadingBackdrop.style.display = 'none';
+    }, 200);
+  };
+
+  // Polyfill window.alert secara global agar setiap alert otomatis menggunakan modal menarik
+  window.alert = function(msg) {
+    const isError = msg && (msg.toLowerCase().includes('gagal') || msg.toLowerCase().includes('tidak') || msg.toLowerCase().includes('kesalahan') || msg.toLowerCase().includes('error'));
+    return window.showAlert(msg, {
+      title: isError ? 'Pemberitahuan' : 'Informasi',
+      type: isError ? 'error' : 'info'
+    });
+  };
+
+  // Intercept form onsubmit yang menggunakan inline confirm(...) agar otomatis tampil sebagai modal menarik
+  document.addEventListener('submit', function(e) {
+    const form = e.target;
+    if (!form || !form.getAttribute) return;
+    const onsubmitAttr = form.getAttribute('onsubmit');
+    if (onsubmitAttr && onsubmitAttr.includes('confirm(')) {
+      const match = onsubmitAttr.match(/confirm\s*\(\s*(['"`])(.*?)\1\s*\)/);
+      if (match) {
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        const msg = match[2];
+        window.showConfirm(msg, {
+          title: 'Konfirmasi',
+          confirmText: 'Ya, Lanjutkan',
+          danger: true
+        }).then((confirmed) => {
+          if (confirmed) {
+            window.showLoading('Memproses...', 'Mohon tunggu sebentar...');
+            form.removeAttribute('onsubmit');
+            form.submit();
+          }
+        });
+      }
+    }
+  }, true);
+})();
+</script>
