@@ -194,7 +194,7 @@
                 <% const sInfo = getStatusInfo(order.order_status, order.payment_status); %>
                 <tr id="row-<%= order.id %>">
                   <td style="text-align: center;">
-                    <input type="checkbox" class="order-cb" value="<%= order.id %>" onchange="onCheckboxChange()">
+                    <input type="checkbox" class="order-cb" value="<%= order.order_number %>" data-id="<%= order.id %>" data-order-number="<%= order.order_number %>" onchange="onCheckboxChange()">
                   </td>
                   <td><strong><%= order.order_number %></strong></td>
                   <td style="font-size: 13px; color: var(--text-muted);"><%= formatDate(order.created_at) %></td>

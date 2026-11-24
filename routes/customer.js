@@ -185,8 +185,11 @@ router.post('/checkout', async (req, res) => {
   }
 
   const normalizedPhone = normalizePhone(customer_phone);
-  if (!normalizedPhone || normalizedPhone.length < 9) {
-    return res.status(400).json({ success: false, message: 'Nomor WhatsApp / HP tidak valid.' });
+  if (!normalizedPhone) {
+    return res.status(400).json({
+      success: false,
+      message: 'Nomor WhatsApp / HP tidak valid. Harap gunakan format Indonesia yang benar (contoh: 08123456789 atau +628123456789).'
+    });
   }
 
   if (method === 'delivery' && (!address || !address.trim())) {
@@ -376,11 +379,11 @@ router.post('/checkout', async (req, res) => {
 });
 
 // Order Tracking & Payment Page
-router.get('/order/:token', (req, res) => {
+router.get('/order/:token', async (req, res) => {
   const { token } = req.params;
   const db = getDb();
 
-  const order = findOrderByToken(token, req);
+  const order = await findOrderByToken(token, req, res);
   if (!order) {
     return res.status(404).render('error', {
       title: 'Pesanan Tidak Ditemukan',
@@ -414,7 +417,7 @@ router.post('/order/:token/upload', uploadPayment.single('payment_proof'), async
   const { token } = req.params;
   const db = getDb();
 
-  const order = findOrderByToken(token, req);
+  const order = await findOrderByToken(token, req, res);
   if (!order) {
     return res.status(404).render('error', { title: 'Pesanan Tidak Ditemukan', message: 'Pesanan tidak ditemukan.' });
   }
@@ -509,10 +512,10 @@ router.post('/order/:token/upload', uploadPayment.single('payment_proof'), async
 });
 
 // Download / View Payment Proof
-router.get('/order/:token/proof/:id', (req, res) => {
+router.get('/order/:token/proof/:id', async (req, res) => {
   const { token, id } = req.params;
   const db = getDb();
-  findOrderByToken(token, req); // Ensure order is rehydrated in local SQLite if on fresh serverless instance
+  await findOrderByToken(token, req, res); // Ensure order is rehydrated in local SQLite if on fresh serverless instance
 
   const submission = db.prepare(`
     SELECT ps.*, o.access_token 

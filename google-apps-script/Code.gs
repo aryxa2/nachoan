@@ -347,6 +347,74 @@ function doPost(e) {
       return jsonResponse({ success: true, count: products.length });
     }
 
+    // 6. Delete Orders (Permanent Deletion Marker in Sheet)
+    if (action === "deleteOrders" || action === "deleteOrder") {
+      const expectedSecret = PropertiesService.getScriptProperties().getProperty("APPS_SCRIPT_SECRET");
+      if (expectedSecret && expectedSecret.trim() !== "") {
+        const providedSecret = payload.secret || (e && e.parameter && e.parameter.secret) || "";
+        if (providedSecret !== expectedSecret) {
+          return jsonResponse({ success: false, message: "Unauthorized: Invalid secret." }, 401);
+        }
+      }
+
+      const oSheet = ss.getSheetByName("Orders");
+      const oiSheet = ss.getSheetByName("OrderItems");
+      if (!oSheet) {
+        return jsonResponse({ success: false, message: "Sheet Orders tidak ditemukan." }, 404);
+      }
+
+      let orderNumbers = payload.order_numbers || (payload.order_number ? [payload.order_number] : []);
+      if (!Array.isArray(orderNumbers) || orderNumbers.length === 0) {
+        return jsonResponse({ success: false, message: "order_numbers wajib diisi berupa array." }, 400);
+      }
+
+      const nowStr = Utilities.formatDate(new Date(), "Asia/Jakarta", "yyyy-MM-dd HH:mm:ss");
+      const results = {
+        success: true,
+        deleted: [],
+        notFound: [],
+        failed: []
+      };
+
+      for (let k = 0; k < orderNumbers.length; k++) {
+        const orderNum = String(orderNumbers[k]).trim();
+        if (!orderNum) continue;
+
+        const rowIdx = findOrderRowIndex(oSheet, orderNum);
+        if (rowIdx === -1) {
+          results.notFound.push(orderNum);
+          continue;
+        }
+
+        try {
+          // Tandai status pembayaran & status pesanan sebagai DELETED
+          oSheet.getRange(rowIdx, 12).setValue("DELETED");
+          oSheet.getRange(rowIdx, 13).setValue("DELETED");
+          oSheet.getRange(rowIdx, 15).setValue(nowStr);
+
+          // Hapus baris item terkait di sheet OrderItems
+          if (oiSheet) {
+            const oiData = oiSheet.getDataRange().getValues();
+            for (let r = oiData.length - 1; r >= 1; r--) {
+              if (String(oiData[r][1]).trim() === orderNum) {
+                oiSheet.deleteRow(r + 1);
+              }
+            }
+          }
+
+          results.deleted.push(orderNum);
+        } catch (itemErr) {
+          results.failed.push({ order_number: orderNum, error: itemErr.toString() });
+        }
+      }
+
+      if (results.failed.length > 0 && results.deleted.length === 0) {
+        results.success = false;
+      }
+
+      return jsonResponse(results);
+    }
+
     return jsonResponse({ success: false, message: "Action tidak dikenali." }, 400);
 
   } catch (error) {

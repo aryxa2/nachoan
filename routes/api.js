@@ -5,11 +5,11 @@ const { calculateCart } = require('../lib/cart');
 const { findOrderByToken } = require('../lib/orders');
 
 // Polling endpoint for live order status
-router.get('/order/:token/status', (req, res) => {
+router.get('/order/:token/status', async (req, res) => {
   const { token } = req.params;
   const db = getDb();
 
-  const order = findOrderByToken(token, req);
+  const order = await findOrderByToken(token, req, res);
 
   if (!order) {
     return res.status(404).json({ success: false, message: 'Pesanan tidak ditemukan' });

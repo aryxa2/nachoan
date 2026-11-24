@@ -58,6 +58,11 @@ async function runTest() {
   console.log(`[INFO] Server running on test port ${port}`);
 
   const db = getDb();
+  const sheets = require('../lib/sheets');
+  sheets.setMockAppsScriptHandler((method, payload) => {
+    return { success: true, deleted: payload.order_numbers || [] };
+  });
+
   let createdOrderId = null;
   let createdOrderToken = null;
   let createdOrderNumber = null;
@@ -202,7 +207,7 @@ async function runTest() {
     });
     assert.strictEqual(orderDetailRes.statusCode, 200, 'Detail pesanan harus HTTP 200');
     assert(orderDetailRes.body.includes(createdOrderNumber), 'Detail harus memuat nomor order');
-    assert(orderDetailRes.body.includes('action="/admin/orders/' + createdOrderId + '/delete"'), 'Tombol/Form Hapus Pesanan harus ada di halaman detail');
+    assert(orderDetailRes.body.includes('action="/admin/orders/' + createdOrderNumber + '/delete"') || orderDetailRes.body.includes('action="/admin/orders/' + createdOrderId + '/delete"'), 'Tombol/Form Hapus Pesanan harus ada di halaman detail');
     console.log('✔ [BERHASIL] Halaman detail pesanan memuat rincian dan TOMBOL HAPUS PESANAN (DELETE).');
 
     // -------------------------------------------------------------
@@ -296,6 +301,8 @@ async function runTest() {
     console.log('===============================================================');
 
   } finally {
+    const sheets = require('../lib/sheets');
+    sheets.setMockAppsScriptHandler(null);
     server.close();
   }
 }

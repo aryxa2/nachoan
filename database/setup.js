@@ -150,6 +150,13 @@ function setup() {
       FOREIGN KEY (order_id) REFERENCES orders(id)
     );
 
+    CREATE TABLE IF NOT EXISTS deleted_orders (
+      order_number TEXT PRIMARY KEY,
+      access_token TEXT,
+      deleted_at TEXT
+    );
+    CREATE INDEX IF NOT EXISTS idx_deleted_orders_token ON deleted_orders(access_token);
+
     CREATE TABLE IF NOT EXISTS store_settings (
       key TEXT PRIMARY KEY,
       value TEXT

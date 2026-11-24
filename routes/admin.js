@@ -6,6 +6,7 @@ const bcrypt = require('bcryptjs');
 const multer = require('multer');
 const getDb = require('../lib/db');
 const { now, formatDate, getStatusInfo } = require('../lib/helpers');
+const { deleteOrdersService } = require('../lib/orders');
 
 // Multer storage for admin product, QRIS, and carousel uploads
 const adminUploadStorage = multer.diskStorage({
@@ -44,6 +45,9 @@ const uploadAdmin = multer({
 function requireAuth(req, res, next) {
   if (req.session && req.session.admin) {
     return next();
+  }
+  if (req.xhr || req.headers.accept?.includes('json') || req.is('json')) {
+    return res.status(401).json({ success: false, message: 'Sesi admin tidak valid atau telah berakhir. Silakan login kembali.' });
   }
   return res.redirect('/admin/login');
 }
@@ -160,7 +164,7 @@ router.get('/orders', async (req, res) => {
   const db = getDb();
   const { status, search } = req.query;
 
-  let query = 'SELECT * FROM orders WHERE 1=1';
+  let query = "SELECT * FROM orders WHERE order_status != 'DELETED'";
   const params = [];
 
   if (status && status !== 'all') {
@@ -186,10 +190,10 @@ router.get('/orders', async (req, res) => {
 
   // Status counts for filters
   const counts = {
-    all: db.prepare('SELECT COUNT(*) as count FROM orders').get().count,
+    all: db.prepare("SELECT COUNT(*) as count FROM orders WHERE order_status != 'DELETED'").get().count,
     waiting: db.prepare("SELECT COUNT(*) as count FROM orders WHERE order_status = 'WAITING_CONFIRMATION'").get().count,
-    paid: db.prepare("SELECT COUNT(*) as count FROM orders WHERE payment_status = 'PAID'").get().count,
-    unpaid: db.prepare("SELECT COUNT(*) as count FROM orders WHERE payment_status = 'UNPAID'").get().count,
+    paid: db.prepare("SELECT COUNT(*) as count FROM orders WHERE payment_status = 'PAID' AND order_status != 'DELETED'").get().count,
+    unpaid: db.prepare("SELECT COUNT(*) as count FROM orders WHERE payment_status = 'UNPAID' AND order_status != 'DELETED'").get().count,
   };
 
   // Active products for manual order modal
@@ -469,51 +473,25 @@ router.post('/orders/bulk-update', (req, res) => {
   res.redirect(`/admin/orders?msg=Berhasil+memperbarui+${order_ids.length}+pesanan.`);
 });
 
-// Bulk Delete Orders
-router.post('/orders/bulk-delete', (req, res) => {
-  const db = getDb();
-  let { order_ids } = req.body;
+// Bulk Delete Orders (via unified deleteOrdersService)
+router.post('/orders/bulk-delete', async (req, res) => {
+  let { order_ids, order_numbers } = req.body;
+  const list = order_numbers || order_ids;
 
-  if (typeof order_ids === 'string') {
-    try {
-      order_ids = JSON.parse(order_ids);
-    } catch (e) {
-      order_ids = order_ids.split(',').map(x => x.trim()).filter(Boolean);
-    }
-  }
-
-  if (!Array.isArray(order_ids) || order_ids.length === 0) {
-    if (req.xhr || req.headers.accept?.includes('json')) {
-      return res.status(400).json({ success: false, message: 'Pilih minimal satu pesanan untuk dihapus.' });
-    }
-    return res.redirect('/admin/orders?error=Pilih+minimal+satu+pesanan.');
-  }
-
-  const deleteTx = db.transaction(() => {
-    for (const id of order_ids) {
-      db.prepare('DELETE FROM order_status_history WHERE order_id = ?').run(id);
-      db.prepare('DELETE FROM payment_submissions WHERE order_id = ?').run(id);
-      db.prepare('DELETE FROM order_items WHERE order_id = ?').run(id);
-      db.prepare('DELETE FROM orders WHERE id = ?').run(id);
-    }
+  const result = await deleteOrdersService({
+    orderIdentifiers: list,
+    adminUser: req.session.admin
   });
 
-  deleteTx();
-
-  // Sync deletion to Google Sheets
-  setImmediate(() => {
-    try {
-      const sheets = require('../lib/sheets');
-      sheets.syncOrdersToSpreadsheet();
-    } catch (e) {
-      console.error('Delete sync to sheets error:', e.message);
-    }
-  });
-
-  if (req.xhr || req.headers.accept?.includes('json')) {
-    return res.json({ success: true, count: order_ids.length, message: `Berhasil menghapus ${order_ids.length} pesanan!` });
+  if (req.xhr || req.headers.accept?.includes('json') || req.is('json')) {
+    return res.status(result.success ? 200 : 400).json(result);
   }
-  res.redirect(`/admin/orders?msg=Berhasil+menghapus+${order_ids.length}+pesanan.`);
+
+  if (result.success) {
+    return res.redirect(`/admin/orders?msg=${encodeURIComponent(result.message)}`);
+  } else {
+    return res.redirect(`/admin/orders?error=${encodeURIComponent(result.message)}`);
+  }
 });
 
 // Create Order Manually from Admin
@@ -1309,29 +1287,23 @@ router.post('/carousel/:id/delete', (req, res) => {
   res.redirect('/admin/carousel?msg=deleted');
 });
 
-// Delete Order (hard delete)
+// Delete Order (Single, via unified deleteOrdersService)
 router.post('/orders/:id/delete', async (req, res) => {
   const { id } = req.params;
-  const db = getDb();
-  const order = db.prepare('SELECT * FROM orders WHERE id = ?').get(id);
-  if (!order) {
-    return res.status(404).send('Pesanan tidak ditemukan.');
-  }
-  const tx = db.transaction(() => {
-    // Delete related items
-    db.prepare('DELETE FROM order_items WHERE order_id = ?').run(id);
-    db.prepare('DELETE FROM payment_submissions WHERE order_id = ?').run(id);
-    db.prepare('DELETE FROM order_status_history WHERE order_id = ?').run(id);
-    // Finally delete the order itself
-    db.prepare('DELETE FROM orders WHERE id = ?').run(id);
+  const result = await deleteOrdersService({
+    orderIdentifiers: [id],
+    adminUser: req.session.admin
   });
-  tx();
-  // Sync to Google Sheet if not on Vercel
-  try {
-    const sheets = require('../lib/sheets');
-    if (!process.env.VERCEL) sheets.syncOrdersToSpreadsheet();
-  } catch (e) { console.error('Sheets sync error:', e.message); }
-  res.redirect('/admin/orders?msg=deleted');
+
+  if (req.xhr || req.headers.accept?.includes('json') || req.is('json')) {
+    return res.status(result.success ? 200 : (result.notFoundCount > 0 ? 404 : 400)).json(result);
+  }
+
+  if (result.success) {
+    return res.redirect(`/admin/orders?msg=${encodeURIComponent(result.message)}`);
+  } else {
+    return res.redirect(`/admin/orders?error=${encodeURIComponent(result.message)}`);
+  }
 });
 
 module.exports = router;
