@@ -122,6 +122,10 @@ class MockGoogleAppsScript {
       }
 
       if (action === 'deleteOrders' || action === 'deleteOrder') {
+        if (this.simulateUnrecognizedDeleteOrders) {
+          return { status: 400, success: false, message: 'Action tidak dikenali.' };
+        }
+
         // Verify secret if provided
         if (this.secret && payload.secret !== this.secret) {
           return { success: false, message: 'Unauthorized: Invalid secret.' };
@@ -148,6 +152,18 @@ class MockGoogleAppsScript {
         }
 
         return result;
+      }
+
+      if (action === 'updateOrderStatus') {
+        const num = payload.order_number;
+        const row = this.ordersSheet.find(r => r['No Pesanan'] === num);
+        if (!row) {
+          return { status: 404, success: false, message: `Pesanan ${num} tidak ditemukan di spreadsheet.` };
+        }
+        if (payload.payment_status) row['Status Pembayaran'] = payload.payment_status;
+        if (payload.order_status) row['Status Pesanan'] = payload.order_status;
+        row['Terakhir Diperbarui'] = new Date().toISOString();
+        return { status: 200, success: true, message: `Pesanan ${num} berhasil diperbarui di spreadsheet.` };
       }
     }
 
@@ -495,6 +511,80 @@ async function runRegressionTests() {
     const repeatJson = JSON.parse(repeatRes.body);
     assert.strictEqual(repeatJson.success, true, 'Permintaan hapus ulang harus aman dan sukses (idempotent)');
     console.log('✔ [6.4] Permintaan hapus berulang (retry) aman dan idempotent.');
+
+    // 6.5 Fallback Ketika Apps Script Belum Mengenali deleteOrders ("Action tidak dikenali.")
+    // Simulasi rilis di mana Code.gs belum dideploy versi baru
+    const testFallbackOrder = 'NCH-' + Math.floor(10000 + Math.random() * 90000);
+    mockAppsScript.ordersSheet.push({
+      'No Pesanan': testFallbackOrder,
+      'Status Pembayaran': 'UNPAID',
+      'Status Pesanan': 'NEW',
+      'Terakhir Diperbarui': new Date().toISOString()
+    });
+    db.prepare(`
+      INSERT INTO orders (order_number, access_token, customer_name, customer_phone, method, subtotal, total, payment_status, order_status, created_at, updated_at)
+      VALUES (?, 'fallback_token', 'Fallback User', '+6281299990000', 'pickup', 15000, 15000, 'UNPAID', 'NEW', datetime('now'), datetime('now'))
+    `).run(testFallbackOrder);
+
+    mockAppsScript.simulateUnrecognizedDeleteOrders = true; // Picu 400 "Action tidak dikenali."
+    const fbRes = await request(server, {
+      path: '/admin/orders/bulk-delete',
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Cookie': adminCookies, 'Accept': 'application/json' },
+    }, JSON.stringify({ order_ids: [testFallbackOrder] }));
+    mockAppsScript.simulateUnrecognizedDeleteOrders = false;
+
+    assert.strictEqual(fbRes.statusCode, 200, 'Fallback harus berhasil menghapus pesanan meski deleteOrders belum terdaftar');
+    const fbJson = JSON.parse(fbRes.body);
+    assert.strictEqual(fbJson.success, true);
+    
+    // Verifikasi baris di mock sheet ditandai DELETED via updateOrderStatus
+    const sheetRow = mockAppsScript.ordersSheet.find(r => r['No Pesanan'] === testFallbackOrder);
+    assert.strictEqual(sheetRow['Status Pesanan'], 'DELETED', 'Sheet harus ditandai DELETED via updateOrderStatus fallback');
+    console.log('✔ [6.5] Fallback berhasil: Ketika deleteOrders belum aktif, sistem otomatis memperbarui status menjadi DELETED di spreadsheet.');
+
+    // 6.6 Bulk Update Status Pesanan & Pembayaran (Menggunakan order_number)
+    const testUpdateOrder = 'NCH-' + Math.floor(10000 + Math.random() * 90000);
+    db.prepare(`
+      INSERT INTO orders (order_number, access_token, customer_name, customer_phone, method, subtotal, total, payment_status, order_status, created_at, updated_at)
+      VALUES (?, 'upd_token', 'Update User', '+6281299991111', 'pickup', 15000, 15000, 'UNPAID', 'NEW', datetime('now'), datetime('now'))
+    `).run(testUpdateOrder);
+    mockAppsScript.ordersSheet.push({
+      'No Pesanan': testUpdateOrder,
+      'Status Pembayaran': 'UNPAID',
+      'Status Pesanan': 'NEW'
+    });
+
+    const bulkUpdRes = await request(server, {
+      path: '/admin/orders/bulk-update',
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Cookie': adminCookies, 'Accept': 'application/json' },
+    }, JSON.stringify({
+      order_ids: [testUpdateOrder],
+      order_status: 'CANCELLED',
+      payment_status: 'REJECTED'
+    }));
+    assert.strictEqual(bulkUpdRes.statusCode, 200);
+    const updatedLocal = db.prepare('SELECT order_status, payment_status FROM orders WHERE order_number = ?').get(testUpdateOrder);
+    assert.strictEqual(updatedLocal.order_status, 'CANCELLED');
+    assert.strictEqual(updatedLocal.payment_status, 'REJECTED');
+    const updatedSheet = mockAppsScript.ordersSheet.find(r => r['No Pesanan'] === testUpdateOrder);
+    assert.strictEqual(updatedSheet['Status Pesanan'], 'CANCELLED');
+    assert.strictEqual(updatedSheet['Status Pembayaran'], 'REJECTED');
+    console.log('✔ [6.6] Bulk update status pesanan dan pembayaran berhasil di SQLite dan tersinkronisasi ke Google Sheets.');
+
+    // 6.7 Hapus Seluruh Pesanan Batal (/admin/orders/delete-cancelled)
+    const delCancelRes = await request(server, {
+      path: '/admin/orders/delete-cancelled',
+      method: 'POST',
+      headers: { 'Cookie': adminCookies, 'Accept': 'application/json' }
+    });
+    assert.strictEqual(delCancelRes.statusCode, 200);
+    const delCancelJson = JSON.parse(delCancelRes.body);
+    assert.strictEqual(delCancelJson.success, true);
+    const cancelRemaining = db.prepare("SELECT COUNT(*) as count FROM orders WHERE order_status = 'CANCELLED'").get().count;
+    assert.strictEqual(cancelRemaining, 0, 'Seluruh pesanan CANCELLED harus terhapus');
+    console.log('✔ [6.7] Endpoint Hapus Semua Pesanan Batal (/admin/orders/delete-cancelled) berhasil menghapus pesanan CANCELLED.');
 
     console.log('\n======================================================================');
     console.log('  🎉 SELURUH PENGUJIAN REGRESI DAN KEAMANAN LULUS 100%!               ');

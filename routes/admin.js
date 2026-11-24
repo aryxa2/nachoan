@@ -194,6 +194,7 @@ router.get('/orders', async (req, res) => {
     waiting: db.prepare("SELECT COUNT(*) as count FROM orders WHERE order_status = 'WAITING_CONFIRMATION'").get().count,
     paid: db.prepare("SELECT COUNT(*) as count FROM orders WHERE payment_status = 'PAID' AND order_status != 'DELETED'").get().count,
     unpaid: db.prepare("SELECT COUNT(*) as count FROM orders WHERE payment_status = 'UNPAID' AND order_status != 'DELETED'").get().count,
+    cancelled: db.prepare("SELECT COUNT(*) as count FROM orders WHERE order_status = 'CANCELLED'").get().count,
   };
 
   // Active products for manual order modal
@@ -401,31 +402,42 @@ router.post('/orders/:id/status', async (req, res) => {
 // ==========================================
 
 // Bulk Update Order Status and/or Payment Status
-router.post('/orders/bulk-update', (req, res) => {
+router.post('/orders/bulk-update', async (req, res) => {
   const db = getDb();
-  let { order_ids, order_status, payment_status } = req.body;
+  let { order_ids, order_numbers, order_status, payment_status } = req.body;
   const currentTime = now();
   const adminName = req.session.admin.name || req.session.admin.username;
 
-  if (typeof order_ids === 'string') {
+  let rawList = order_numbers || order_ids;
+  if (typeof rawList === 'string') {
     try {
-      order_ids = JSON.parse(order_ids);
+      rawList = JSON.parse(rawList);
     } catch (e) {
-      order_ids = order_ids.split(',').map(x => x.trim()).filter(Boolean);
+      rawList = rawList.split(',').map(x => x.trim()).filter(Boolean);
     }
   }
 
-  if (!Array.isArray(order_ids) || order_ids.length === 0) {
+  if (!Array.isArray(rawList) || rawList.length === 0) {
     if (req.xhr || req.headers.accept?.includes('json')) {
       return res.status(400).json({ success: false, message: 'Pilih minimal satu pesanan.' });
     }
     return res.redirect('/admin/orders?error=Pilih+minimal+satu+pesanan.');
   }
 
+  const updatedOrders = [];
   const bulkTx = db.transaction(() => {
-    for (const id of order_ids) {
-      const existing = db.prepare('SELECT * FROM orders WHERE id = ?').get(id);
+    for (const rawId of rawList) {
+      const s = String(rawId).trim();
+      let existing = null;
+      if (/^\d+$/.test(s)) {
+        existing = db.prepare('SELECT * FROM orders WHERE id = ?').get(parseInt(s, 10));
+      }
+      if (!existing) {
+        existing = db.prepare('SELECT * FROM orders WHERE order_number = ?').get(s);
+      }
       if (!existing) continue;
+
+      updatedOrders.push(existing);
 
       if (payment_status && payment_status.trim()) {
         const newPay = payment_status.trim();
@@ -434,43 +446,52 @@ router.post('/orders/bulk-update', (req, res) => {
           SET payment_status = ?, 
               updated_at = ? 
           WHERE id = ?
-        `).run(newPay, currentTime, id);
+        `).run(newPay, currentTime, existing.id);
 
         db.prepare(`
           INSERT INTO order_status_history (order_id, field, old_value, new_value, actor, reason, created_at)
           VALUES (?, 'payment_status', ?, ?, ?, 'Bulk update oleh admin', ?)
-        `).run(id, existing.payment_status, newPay, `admin (${adminName})`, currentTime);
+        `).run(existing.id, existing.payment_status, newPay, `admin (${adminName})`, currentTime);
       }
 
       if (order_status && order_status.trim()) {
         const newStatus = order_status.trim();
         db.prepare('UPDATE orders SET order_status = ?, updated_at = ? WHERE id = ?')
-          .run(newStatus, currentTime, id);
+          .run(newStatus, currentTime, existing.id);
 
         db.prepare(`
           INSERT INTO order_status_history (order_id, field, old_value, new_value, actor, reason, created_at)
           VALUES (?, 'order_status', ?, ?, ?, 'Bulk update oleh admin', ?)
-        `).run(id, existing.order_status, newStatus, `admin (${adminName})`, currentTime);
+        `).run(existing.id, existing.order_status, newStatus, `admin (${adminName})`, currentTime);
       }
     }
   });
 
   bulkTx();
 
-  // Asynchronously sync to Google Sheets
-  setImmediate(() => {
+  // Asynchronously sync each updated order to Google Sheets via Apps Script
+  const sheets = require('../lib/sheets');
+  const payVal = payment_status && payment_status.trim() ? payment_status.trim() : null;
+  const statusVal = order_status && order_status.trim() ? order_status.trim() : null;
+
+  for (const o of updatedOrders) {
     try {
-      const sheets = require('../lib/sheets');
-      sheets.syncOrdersToSpreadsheet();
+      await sheets.updateOrderStatusInAppsScript(o.order_number, payVal, statusVal);
     } catch (e) {
-      console.error('Bulk sync to sheets error:', e.message);
+      console.error(`Error updating order ${o.order_number} to sheets:`, e.message);
     }
-  });
+  }
+
+  if (!process.env.VERCEL) {
+    try {
+      sheets.syncOrdersToSpreadsheet();
+    } catch (_) {}
+  }
 
   if (req.xhr || req.headers.accept?.includes('json')) {
-    return res.json({ success: true, count: order_ids.length, message: `Berhasil memperbarui ${order_ids.length} pesanan!` });
+    return res.json({ success: true, count: updatedOrders.length, message: `Berhasil memperbarui ${updatedOrders.length} pesanan!` });
   }
-  res.redirect(`/admin/orders?msg=Berhasil+memperbarui+${order_ids.length}+pesanan.`);
+  res.redirect(`/admin/orders?msg=Berhasil+memperbarui+${updatedOrders.length}+pesanan.`);
 });
 
 // Bulk Delete Orders (via unified deleteOrdersService)
@@ -487,6 +508,33 @@ router.post('/orders/bulk-delete', async (req, res) => {
     return res.status(result.success ? 200 : 400).json(result);
   }
 
+  if (result.success) {
+    return res.redirect(`/admin/orders?msg=${encodeURIComponent(result.message)}`);
+  } else {
+    return res.redirect(`/admin/orders?error=${encodeURIComponent(result.message)}`);
+  }
+});
+
+// Delete All Cancelled Orders
+router.post('/orders/delete-cancelled', async (req, res) => {
+  const db = getDb();
+  const cancelledOrders = db.prepare("SELECT order_number FROM orders WHERE order_status = 'CANCELLED'").all();
+  if (cancelledOrders.length === 0) {
+    if (req.xhr || req.headers.accept?.includes('json')) {
+      return res.json({ success: true, message: 'Tidak ada pesanan berstatus Dibatalkan (CANCELLED).', deletedCount: 0 });
+    }
+    return res.redirect('/admin/orders?msg=Tidak+ada+pesanan+berstatus+Dibatalkan.');
+  }
+
+  const list = cancelledOrders.map(o => o.order_number);
+  const result = await deleteOrdersService({
+    orderIdentifiers: list,
+    adminUser: req.session.admin
+  });
+
+  if (req.xhr || req.headers.accept?.includes('json') || req.is('json')) {
+    return res.status(result.success ? 200 : 400).json(result);
+  }
   if (result.success) {
     return res.redirect(`/admin/orders?msg=${encodeURIComponent(result.message)}`);
   } else {
@@ -594,10 +642,17 @@ router.post('/orders/create-manual', (req, res) => {
   const newOrderId = insertTx();
 
   // Sync to Google Sheets
-  setImmediate(() => {
+  setImmediate(async () => {
     try {
       const sheets = require('../lib/sheets');
-      sheets.syncOrdersToSpreadsheet();
+      const orderRecord = db.prepare('SELECT * FROM orders WHERE id = ?').get(newOrderId);
+      const itemRecords = db.prepare('SELECT * FROM order_items WHERE order_id = ?').all(newOrderId);
+      if (orderRecord) {
+        await sheets.pushOrderToAppsScript(orderRecord, itemRecords);
+      }
+      if (!process.env.VERCEL) {
+        sheets.syncOrdersToSpreadsheet();
+      }
     } catch (e) {
       console.error('Manual order sync to sheets error:', e.message);
     }
@@ -612,11 +667,16 @@ router.post('/orders/create-manual', (req, res) => {
 });
 
 // Sync FROM Spreadsheet -> Website (Pull changes)
-router.post('/orders/sync-from-sheets', (req, res) => {
+router.post('/orders/sync-from-sheets', async (req, res) => {
   try {
     const sheets = require('../lib/sheets');
-    const result = sheets.pullOrdersFromSpreadsheet();
-    res.json(result);
+    if (process.env.VERCEL || sheets.getAppsScriptUrl()) {
+      await sheets.syncOrdersFromAppsScriptIfVercel(true);
+      return res.json({ success: true, message: 'Sinkronisasi pesanan dari Google Sheets berhasil!' });
+    } else {
+      const result = sheets.pullOrdersFromSpreadsheet();
+      return res.json(result);
+    }
   } catch (err) {
     console.error('Sync from sheets error:', err);
     res.status(500).json({ success: false, message: 'Gagal menarik data dari Google Sheets: ' + err.message });

@@ -70,7 +70,12 @@
         <button type="button" class="btn btn-primary btn-sm" onclick="openManualOrderModal()">
           + Tambah Pesanan Manual
         </button>
-        <button type="button" class="btn btn-outline btn-sm" style="color: #dc2626; border-color: #fca5a5;" onclick="confirmResetAll()" title="Reset pesanan dan format spreadsheet dari awal">
+        <% if (counts.cancelled > 0) { %>
+        <button type="button" class="btn btn-outline btn-sm" style="color: #dc2626; border-color: #fca5a5; font-weight: 600;" onclick="deleteCancelledOrders()" title="Hapus seluruh pesanan yang dibatalkan">
+          🗑️ Hapus Pesanan Batal (<%= counts.cancelled %>)
+        </button>
+        <% } %>
+        <button type="button" class="btn btn-outline btn-sm" style="color: #6b7280; border-color: #d1d5db;" onclick="confirmResetAll()" title="Reset pesanan dan format spreadsheet dari awal">
           ⚠️ Reset dari Awal
         </button>
       </div>
@@ -155,6 +160,10 @@
         <a href="/admin/orders?status=UNPAID<%= currentSearch ? '&search=' + currentSearch : '' %>" 
            class="btn btn-sm <%= currentStatus === 'UNPAID' ? 'btn-primary' : 'btn-outline' %>">
           Belum Bayar (<%= counts.unpaid %>)
+        </a>
+        <a href="/admin/orders?status=CANCELLED<%= currentSearch ? '&search=' + currentSearch : '' %>" 
+           class="btn btn-sm <%= currentStatus === 'CANCELLED' ? 'btn-primary' : 'btn-outline' %>">
+          Dibatalkan (<%= counts.cancelled || 0 %>)
         </a>
       </div>
 
@@ -508,6 +517,30 @@
         setTimeout(() => window.location.reload(), 800);
       } else {
         alert(data.message || 'Gagal menghapus pesanan.');
+      }
+    } catch (err) {
+      alert('Terjadi kesalahan jaringan.');
+    }
+  }
+
+  async function deleteCancelledOrders() {
+    const ok = confirm('Hapus permanen seluruh pesanan yang dibatalkan (CANCELLED)? Tindakan ini tidak dapat dibatalkan.');
+    if (!ok) return;
+
+    try {
+      const res = await fetch('/admin/orders/delete-cancelled', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        }
+      });
+      const data = await res.json();
+      if (data.success) {
+        showToast(data.message, true);
+        setTimeout(() => window.location.reload(), 800);
+      } else {
+        alert(data.message || 'Gagal menghapus pesanan batal.');
       }
     } catch (err) {
       alert('Terjadi kesalahan jaringan.');
