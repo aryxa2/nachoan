@@ -123,7 +123,7 @@ function seed() {
     phone: '+6281231777614',
     hours: 'PO Batch 1 (23-27 Nov) | Next Batch & Expo Coming Soon',
     instagram: '@nachoan_',
-    apps_script_url: 'https://script.google.com/macros/s/AKfycbyvsQbsJYl-IEtmkvACoUF6nEfPO8qxolw2SzfWU94seqlki13xFkNlqPm5hFLKFRc/exec',
+    apps_script_url: 'https://script.google.com/macros/s/AKfycbyM6ev0fkC7ZuP878QaRKACzqEwUfzd_g7Z7XZtTyrUWTzeTisd5cyxfDA_d1quQMKW/exec',
     demo_mode: 'true',
   };
   const insertSetting = db.prepare(`INSERT OR REPLACE INTO store_settings (key, value) VALUES (?, ?)`);
