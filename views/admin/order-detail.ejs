@@ -141,6 +141,14 @@
               <span style="color: var(--text-muted); font-size: 12px; display: block;">Catatan Pembeli</span>
               <em><%= order.notes || '-' %></em>
             </div>
+            <div>
+              <span style="color: var(--text-muted); font-size: 12px; display: block;">Kode Referral</span>
+              <% if (order.referral_code) { %>
+                <span class="badge badge-yellow" style="margin-top: 2px;"><%= order.referral_code %></span>
+              <% } else { %>
+                <span>-</span>
+              <% } %>
+            </div>
             <% if (order.method === 'delivery') { %>
               <div style="grid-column: 1 / -1;">
                 <span style="color: var(--text-muted); font-size: 12px; display: block;">Alamat Pengantaran</span>

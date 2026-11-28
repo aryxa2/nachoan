@@ -11,7 +11,7 @@
           <span>YOUR WAY.</span>
         </h1>
         <p class="hero-desc">
-          Your favorite pizza crunchy moment starts here. Nikmati kelezatan <strong>Beefy Nacho</strong> dan <strong>Cheezy Corn</strong> dalam bentuk cone praktis anti-ribet!
+          Your favorite pizza crunchy moment starts here. Nikmati kelezatan <strong>pizza</strong> dalam bentuk cone praktis anti-ribet!
         </p>
         <div class="hero-buttons">
           <a href="/menu" class="btn btn-primary" style="font-size: 16px; padding: 14px 28px;">
@@ -61,53 +61,63 @@
 </section>
 
 
+<% if (typeof bestSeller !== 'undefined' && bestSeller) { %>
 <!-- Best Seller Section -->
 <section class="section">
   <div class="container">
     <div class="section-header">
       <div>
         <h2 class="section-title">BEST SELLER 🔥</h2>
-        <p class="section-subtitle">Menu favorit kami: Beefy Nacho & Cheezy Corn</p>
+        <p class="section-subtitle">Menu terlaris pilihan pelanggan NACHOAN</p>
       </div>
       <a href="/menu" class="view-all-link">Lihat Menu &rsaquo;</a>
     </div>
 
-    <div class="product-grid" style="grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); max-width: <%= bestSellers.length > 2 ? '100%' : '800px' %>; margin: 0 auto;">
-      <% for (const product of bestSellers) { %>
-        <div class="product-card">
-          <span class="badge badge-red card-badge">MENU UTAMA</span>
-          <a href="/product/<%= product.slug %>" class="product-thumb">
-            <img src="<%= product.image %>" alt="<%= product.name %>" loading="lazy">
-          </a>
-          <div class="product-info">
-            <h3 class="product-name">
-              <a href="/product/<%= product.slug %>"><%= product.name %></a>
-            </h3>
-            <p class="product-desc"><%= product.description %></p>
-            <div class="product-footer">
-              <div class="product-price"><%= formatRupiah(product.price) %></div>
-              <button type="button" class="btn btn-primary btn-sm" onclick="Cart.add({ id: <%= product.id %>, type: 'product', name: '<%= product.name %>', price: <%= product.price %>, quantity: 1, image: '<%= product.image %>' })">
-                + Pesan
-              </button>
-            </div>
+    <article class="best-seller-spotlight">
+      <a href="/product/<%= bestSeller.slug %>" class="spotlight-thumb">
+        <img src="<%= bestSeller.image %>" alt="<%= bestSeller.name %>" loading="lazy">
+      </a>
+      <div class="spotlight-body">
+        <div class="spotlight-badges">
+          <span class="badge badge-yellow">#1 TERLARIS</span>
+          <% if (typeof bestSellerSold !== 'undefined' && bestSellerSold >= 10) { %>
+            <span class="badge badge-red"><%= bestSellerSold %>+ Terjual</span>
+          <% } %>
+        </div>
+        <h3 class="spotlight-title">
+          <a href="/product/<%= bestSeller.slug %>"><%= bestSeller.name %></a>
+        </h3>
+        <p class="spotlight-desc"><%= bestSeller.description %></p>
+        <div class="spotlight-footer">
+          <div class="spotlight-price-wrap">
+            <span class="spotlight-price-label">Harga</span>
+            <div class="product-price spotlight-price"><%= formatRupiah(bestSeller.price) %></div>
+          </div>
+          <div class="spotlight-actions">
+            <button type="button" class="btn btn-primary spotlight-cta" onclick="Cart.add({ id: <%= bestSeller.id %>, type: 'product', name: '<%= bestSeller.name.replace(/\\/g, '\\\\').replace(/'/g, "\\'") %>', price: <%= bestSeller.price %>, quantity: 1, image: '<%= bestSeller.image %>' })">
+              + Pesan Sekarang
+            </button>
+            <a href="/product/<%= bestSeller.slug %>" class="btn btn-outline spotlight-detail">
+              Lihat Detail
+            </a>
           </div>
         </div>
-      <% } %>
-    </div>
+      </div>
+    </article>
   </div>
 </section>
+<% } %>
 
-<!-- Combo Coming Soon Banner -->
+<!-- Combo Bundling Banner -->
 <section class="section" style="padding-top: 0;">
   <div class="container">
     <div class="promo-banner" style="background: linear-gradient(135deg, #1A1412 0%, #2B2118 100%);">
       <div>
-        <span class="badge badge-yellow" style="margin-bottom: 12px;">COMING SOON</span>
         <h2 style="color: var(--secondary);">COMBO THAT HITS.</h2>
-        <p>Paket combo hemat lengkap dengan minuman pendamping segera hadir untuk temani momen seru kamu!</p>
-        <span style="display: inline-block; background: rgba(255,255,255,0.1); padding: 8px 18px; border-radius: 9999px; font-size: 13px; font-weight: 700; color: #FFF;">
-          ⏳ Segera Hadir di NACHOAN
-        </span>
+        <p>Paket combo hemat lengkap dengan minuman pendamping telah hadir untuk temani momen seru kamu!</p>
+        <a href="/menu#bundling" class="btn btn-secondary promo-cta">
+          Lihat Paket Bundling
+        </a>
       </div>
       <div style="text-align: center;">
         <img src="/images/products/cheezy-corn.jpg" alt="Cheezy Corn" class="promo-thumb" style="border-radius: 18px; max-height: 220px;">

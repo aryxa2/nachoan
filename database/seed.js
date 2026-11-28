@@ -23,6 +23,7 @@ function seed() {
     { id: 2, name: 'Snacks', slug: 'snacks', sort_order: 2 },
     { id: 3, name: 'Drinks', slug: 'drinks', sort_order: 3 },
     { id: 4, name: 'Bundling', slug: 'bundling', sort_order: 4 },
+    { id: 5, name: 'Add-on', slug: 'add-on', sort_order: 5 },
   ];
   const insertCat = db.prepare(`INSERT OR IGNORE INTO categories (id, name, slug, sort_order) VALUES (@id, @name, @slug, @sort_order)`);
   for (const c of categories) insertCat.run(c);

@@ -98,6 +98,7 @@ function setup() {
       discount INTEGER DEFAULT 0,
       promo_id INTEGER,
       promo_code TEXT,
+      referral_code TEXT,
       total INTEGER NOT NULL,
       payment_status TEXT DEFAULT 'UNPAID',
       order_status TEXT DEFAULT 'NEW',

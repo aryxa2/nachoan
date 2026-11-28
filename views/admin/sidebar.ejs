@@ -14,8 +14,11 @@
     <a href="/admin/orders" class="admin-nav-item <%= path.startsWith('/admin/orders') ? 'active' : '' %>">
       📦 Kelola Pesanan
     </a>
-    <a href="/admin/products" class="admin-nav-item <%= path.startsWith('/admin/products') ? 'active' : '' %>">
+    <a href="/admin/products" class="admin-nav-item <%= path.startsWith('/admin/products') && !(req && req.query && req.query.filter === 'addon') ? 'active' : '' %>">
       🌮 Menu Produk
+    </a>
+    <a href="/admin/products?filter=addon" class="admin-nav-item <%= path.startsWith('/admin/products') && req && req.query && req.query.filter === 'addon' ? 'active' : '' %>">
+      🧀 Menu Add-on
     </a>
     <a href="/admin/bundles" class="admin-nav-item <%= path.startsWith('/admin/bundles') ? 'active' : '' %>">
       🍿 Paket Bundling

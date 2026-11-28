@@ -112,6 +112,12 @@
                 <strong><%= order.address %></strong>
               </div>
             <% } %>
+            <% if (order.referral_code) { %>
+              <div>
+                <span style="color: var(--text-muted); display: block; font-size: 12px;">Kode Referral</span>
+                <span class="badge badge-yellow" style="margin-top: 2px;"><%= order.referral_code %></span>
+              </div>
+            <% } %>
             <% if (order.notes) { %>
               <div style="grid-column: 1 / -1;">
                 <span style="color: var(--text-muted); display: block; font-size: 12px;">Catatan Khusus</span>

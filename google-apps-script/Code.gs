@@ -44,15 +44,23 @@ function getOrCreateProofFolder() {
   return getOrCreateFolder(PROOF_FOLDER_NAME);
 }
 
-function ensureOrdersProofColumn(oSheet) {
+function ensureOrdersColumn(oSheet, headerName, defaultCol) {
   const lastCol = oSheet.getLastColumn();
-  if (lastCol === 0) return 17;
+  if (lastCol === 0) return defaultCol;
   const headers = oSheet.getRange(1, 1, 1, lastCol).getValues()[0];
-  const idx = headers.indexOf("Bukti Pembayaran");
+  const idx = headers.indexOf(headerName);
   if (idx !== -1) return idx + 1;
   const targetCol = lastCol + 1;
-  oSheet.getRange(1, targetCol).setValue("Bukti Pembayaran");
+  oSheet.getRange(1, targetCol).setValue(headerName);
   return targetCol;
+}
+
+function ensureOrdersProofColumn(oSheet) {
+  return ensureOrdersColumn(oSheet, "Bukti Pembayaran", 17);
+}
+
+function ensureOrdersReferralColumn(oSheet) {
+  return ensureOrdersColumn(oSheet, "Kode Referral", 18);
 }
 
 function findOrderRowIndex(oSheet, orderNumber) {
@@ -72,6 +80,7 @@ function appendOrderToSheet(ss, o, items) {
   if (!oSheet || !o || !o.order_number) return -1;
 
   const proofCol = ensureOrdersProofColumn(oSheet);
+  const referralCol = ensureOrdersReferralColumn(oSheet);
   const existingRow = findOrderRowIndex(oSheet, o.order_number);
   const nowStr = Utilities.formatDate(new Date(), "Asia/Jakarta", "yyyy-MM-dd HH:mm:ss");
 
@@ -79,6 +88,7 @@ function appendOrderToSheet(ss, o, items) {
     if (o.payment_status) oSheet.getRange(existingRow, 12).setValue(o.payment_status);
     if (o.order_status) oSheet.getRange(existingRow, 13).setValue(o.order_status);
     if (o.proof_url) oSheet.getRange(existingRow, proofCol).setValue(o.proof_url);
+    if (o.referral_code) oSheet.getRange(existingRow, referralCol).setValue(o.referral_code);
     oSheet.getRange(existingRow, 15).setValue(nowStr);
     return existingRow;
   }
@@ -103,11 +113,13 @@ function appendOrderToSheet(ss, o, items) {
     o.access_token || ""
   ];
 
-  // Pad up to proofCol if sheet has extra columns
-  while (rowValues.length < proofCol - 1) {
+  // Pad up to the furthest dynamic column
+  const maxCol = Math.max(proofCol, referralCol);
+  while (rowValues.length < maxCol) {
     rowValues.push("");
   }
   rowValues[proofCol - 1] = o.proof_url || "-";
+  rowValues[referralCol - 1] = o.referral_code || "-";
   oSheet.appendRow(rowValues);
 
   if (oiSheet && Array.isArray(items)) {

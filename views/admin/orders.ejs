@@ -170,7 +170,7 @@
       <!-- Search Box -->
       <form action="/admin/orders" method="GET" style="display: flex; gap: 8px;">
         <input type="hidden" name="status" value="<%= currentStatus %>">
-        <input type="text" name="search" class="form-control" placeholder="Cari No. Pesanan / Nama / WA..." value="<%= currentSearch %>" style="width: 240px; height: 34px;">
+        <input type="text" name="search" class="form-control" placeholder="Cari No. Pesanan / Nama / WA / Referral..." value="<%= currentSearch %>" style="width: 270px; height: 34px;">
         <button type="submit" class="btn btn-primary btn-sm">Cari</button>
         <% if (currentSearch) { %>
           <a href="/admin/orders?status=<%= currentStatus %>" class="btn btn-outline btn-sm">Reset</a>
@@ -210,6 +210,9 @@
                   <td>
                     <div><strong><%= order.customer_name %></strong></div>
                     <div style="font-size: 12px; color: var(--text-muted);"><%= order.customer_phone %></div>
+                    <% if (order.referral_code) { %>
+                      <span class="badge badge-yellow" style="font-size: 11px; margin-top: 4px;">Ref: <%= order.referral_code %></span>
+                    <% } %>
                   </td>
                   <td>
                     <span class="badge <%= order.method === 'delivery' ? 'badge-yellow' : 'badge-orange' %>">

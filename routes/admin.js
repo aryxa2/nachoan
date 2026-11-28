@@ -179,9 +179,9 @@ router.get('/orders', async (req, res) => {
   }
 
   if (search && search.trim()) {
-    query += ' AND (order_number LIKE ? OR customer_name LIKE ? OR customer_phone LIKE ?)';
+    query += ' AND (order_number LIKE ? OR customer_name LIKE ? OR customer_phone LIKE ? OR referral_code LIKE ?)';
     const term = `%${search.trim()}%`;
-    params.push(term, term, term);
+    params.push(term, term, term, term);
   }
 
   query += ' ORDER BY id DESC';
@@ -797,19 +797,33 @@ router.get('/products', async (req, res) => {
     await require('../lib/sheets').syncCatalogFromAppsScriptIfVercel();
   } catch (e) {}
   const db = getDb();
+  const filter = ['addon', 'main'].includes(req.query.filter) ? req.query.filter : 'all';
+
+  let whereSql = 'WHERE p.archived = 0';
+  if (filter === 'addon') {
+    whereSql += ' AND p.category_id = 5';
+  } else if (filter === 'main') {
+    whereSql += ' AND COALESCE(p.category_id, 1) != 5';
+  }
+
   const products = db.prepare(`
     SELECT p.*, c.name as category_name 
     FROM products p
     LEFT JOIN categories c ON p.category_id = c.id
-    WHERE p.archived = 0
+    ${whereSql}
     ORDER BY p.category_id ASC, p.id ASC
   `).all();
   const categories = db.prepare('SELECT * FROM categories ORDER BY sort_order ASC').all();
+  const addonCount = db.prepare('SELECT COUNT(*) as c FROM products WHERE archived = 0 AND category_id = 5').get().c;
+  const totalCount = db.prepare('SELECT COUNT(*) as c FROM products WHERE archived = 0').get().c;
 
   res.render('admin/products', {
-    title: 'Kelola Menu Produk - Admin NACHOAN',
+    title: filter === 'addon' ? 'Kelola Menu Add-on - Admin NACHOAN' : 'Kelola Menu Produk - Admin NACHOAN',
     products,
-    categories
+    categories,
+    activeFilter: filter,
+    addonCount,
+    totalCount
   });
 });
 
@@ -865,7 +879,8 @@ router.post('/products/new', uploadAdmin.single('image_file'), async (req, res) 
     if (!process.env.VERCEL) sheets.syncAllToSpreadsheet();
   } catch (e) {}
 
-  res.redirect('/admin/products?msg=created');
+  const redirectFilter = req.body.return_filter === 'addon' ? 'filter=addon&' : (req.body.return_filter === 'main' ? 'filter=main&' : '');
+  res.redirect(`/admin/products?${redirectFilter}msg=created`);
 });
 
 // Edit Product
@@ -929,7 +944,8 @@ router.post('/products/:id/edit', uploadAdmin.single('image_file'), async (req, 
     if (!process.env.VERCEL) sheets.syncAllToSpreadsheet();
   } catch (e) {}
 
-  res.redirect('/admin/products?msg=updated');
+  const redirectFilter = req.body.return_filter === 'addon' ? 'filter=addon&' : (req.body.return_filter === 'main' ? 'filter=main&' : '');
+  res.redirect(`/admin/products?${redirectFilter}msg=updated`);
 });
 
 // Toggle Product Availability
@@ -946,7 +962,8 @@ router.post('/products/:id/toggle', async (req, res) => {
       await sheets.pushProductsToAppsScript();
     } catch (e) {}
   }
-  res.redirect('/admin/products');
+  const returnFilter = req.body.return_filter && ['addon', 'main'].includes(req.body.return_filter) ? `?filter=${req.body.return_filter}` : '';
+  res.redirect(`/admin/products${returnFilter}`);
 });
 
 // Delete (Archive) Product
@@ -959,7 +976,8 @@ router.post('/products/:id/delete', async (req, res) => {
     sheets.invalidateCatalogCache();
     await sheets.pushProductsToAppsScript();
   } catch (e) {}
-  res.redirect('/admin/products?msg=deleted');
+  const redirectFilter = req.body.return_filter === 'addon' ? 'filter=addon&' : (req.body.return_filter === 'main' ? 'filter=main&' : '');
+  res.redirect(`/admin/products?${redirectFilter}msg=deleted`);
 });
 
 // Bundles Management

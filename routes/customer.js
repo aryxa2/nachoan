@@ -5,7 +5,7 @@ const fs = require('fs');
 const multer = require('multer');
 const getDb = require('../lib/db');
 const { calculateCart } = require('../lib/cart');
-const { findOrderByToken } = require('../lib/orders');
+const { findOrderByToken, getTopSellingProduct } = require('../lib/orders');
 const { generateOrderNumber, generateToken, normalizePhone, now, formatDate, getStatusInfo } = require('../lib/helpers');
 
 // Multer storage for payment proofs
@@ -42,18 +42,25 @@ const uploadPayment = multer({
 
 // Homepage
 router.get('/', async (req, res) => {
+  let salesMap = null;
   try {
-    await require('../lib/sheets').syncCatalogFromAppsScriptIfVercel();
+    const sheets = require('../lib/sheets');
+    const [, fetchedSales] = await Promise.all([
+      sheets.syncCatalogFromAppsScriptIfVercel(),
+      sheets.getSalesCountMapFromSheets()
+    ]);
+    salesMap = fetchedSales;
   } catch (e) {}
   const db = getDb();
-  const bestSellers = db.prepare('SELECT * FROM products WHERE available = 1 AND archived = 0 ORDER BY id ASC').all();
+  const top = getTopSellingProduct(salesMap);
   const bundles = db.prepare('SELECT * FROM bundles WHERE available = 1 AND archived = 0 ORDER BY id ASC').all();
   const promos = db.prepare('SELECT * FROM promotions WHERE active = 1 ORDER BY id ASC').all();
   const heroSlides = db.prepare('SELECT * FROM hero_slides WHERE active = 1 ORDER BY sort_order ASC, id ASC').all();
 
   res.render('index', {
     title: 'NACHOAN - Your Crunch, Your Way.',
-    bestSellers,
+    bestSeller: top ? top.product : null,
+    bestSellerSold: top ? top.totalSold : 0,
     bundles,
     promos,
     heroSlides
@@ -158,13 +165,14 @@ router.get('/checkout', async (req, res) => {
     const sheets = require('../lib/sheets');
     await sheets.syncCatalogFromAppsScriptIfVercel();
   } catch (e) {}
-
   const db = getDb();
   const deliveryZones = db.prepare('SELECT * FROM delivery_zones WHERE active = 1 ORDER BY id ASC').all();
+  const addons = db.prepare('SELECT * FROM products WHERE category_id = 5 AND available = 1 AND archived = 0 ORDER BY id ASC').all();
 
   res.render('checkout', {
     title: 'Checkout Pesanan - NACHOAN',
-    deliveryZones
+    deliveryZones,
+    addons
   });
 });
 
@@ -180,6 +188,7 @@ router.post('/checkout', async (req, res) => {
     address,
     delivery_zone_id,
     notes,
+    referral_code,
     items: rawItems,
     promo_code,
     idempotency_key
@@ -254,6 +263,7 @@ router.post('/checkout', async (req, res) => {
   const orderNumber = generateOrderNumber();
   const accessToken = generateToken();
   const currentTime = now();
+  const cleanReferral = referral_code ? String(referral_code).trim().toUpperCase().slice(0, 50) || null : null;
 
   // Begin transaction
   const insertOrder = db.transaction(() => {
@@ -262,12 +272,12 @@ router.post('/checkout', async (req, res) => {
       INSERT INTO orders (
         order_number, access_token, customer_name, customer_phone, customer_email,
         method, address, delivery_zone_id, delivery_fee, notes,
-        subtotal, discount, promo_id, promo_code, total,
+        subtotal, discount, promo_id, promo_code, referral_code, total,
         payment_status, order_status, qris_version, idempotency_key, created_at, updated_at
       ) VALUES (
         @order_number, @access_token, @customer_name, @customer_phone, @customer_email,
         @method, @address, @delivery_zone_id, @delivery_fee, @notes,
-        @subtotal, @discount, @promo_id, @promo_code, @total,
+        @subtotal, @discount, @promo_id, @promo_code, @referral_code, @total,
         'UNPAID', 'NEW', 1, @idempotency_key, @created_at, @updated_at
       )
     `);
@@ -287,6 +297,7 @@ router.post('/checkout', async (req, res) => {
       discount: calc.discount,
       promo_id: calc.promo && calc.promo.valid ? calc.promo.id : null,
       promo_code: calc.promo && calc.promo.valid ? calc.promo.code : null,
+      referral_code: cleanReferral,
       total: calc.total,
       idempotency_key: idempotency_key || null,
       created_at: currentTime,
@@ -351,6 +362,7 @@ router.post('/checkout', async (req, res) => {
         discount: calc.discount,
         promo_id: calc.promo && calc.promo.valid ? calc.promo.id : null,
         promo_code: calc.promo && calc.promo.valid ? calc.promo.code : null,
+        referral_code: cleanReferral,
         total: calc.total,
         payment_status: 'UNPAID',
         order_status: 'NEW',

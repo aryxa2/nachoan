@@ -41,6 +41,44 @@
                 </div>
               </div>
 
+              <% if (typeof addons !== 'undefined' && addons && addons.length > 0) { %>
+              <!-- Menu Add-on Card -->
+              <div class="card" id="checkout-addons-card">
+                <div class="addon-card-header">
+                  <div>
+                    <h2 style="font-size: 20px; color: var(--text-dark); margin-bottom: 2px;">Menu Add-on</h2>
+                    <p style="font-size: 13px; color: var(--text-muted);">Tambahkan pelengkap sebelum menyelesaikan pesanan.</p>
+                  </div>
+                </div>
+
+                <div class="addon-grid">
+                  <% for (const addon of addons) { %>
+                    <div class="addon-item" data-addon-id="<%= addon.id %>">
+                      <img src="<%= addon.image %>" alt="<%= addon.name %>" class="addon-thumb" loading="lazy">
+                      <div class="addon-meta">
+                        <div class="addon-name"><%= addon.name %></div>
+                        <% if (addon.description) { %>
+                          <div class="addon-desc"><%= addon.description %></div>
+                        <% } %>
+                        <div class="addon-bottom">
+                          <span class="addon-price"><%= formatRupiah(addon.price) %></span>
+                          <div class="addon-control" data-addon-control="<%= addon.id %>"
+                            data-id="<%= addon.id %>"
+                            data-name="<%= addon.name %>"
+                            data-price="<%= addon.price %>"
+                            data-image="<%= addon.image %>">
+                            <button type="button" class="btn btn-outline btn-sm addon-btn" onclick="addAddon(<%= addon.id %>)">
+                              + Tambah
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  <% } %>
+                </div>
+              </div>
+              <% } %>
+
               <!-- Customer Details & Delivery Container -->
               <div class="card" id="customer-data-container">
                 <h2
@@ -60,6 +98,14 @@
                     placeholder="Contoh: 081234567890" required>
                   <small style="color: var(--text-muted); font-size: 12px;">Digunakan untuk konfirmasi pesanan dan
                     verifikasi QRIS.</small>
+                </div>
+
+                <div class="form-group">
+                  <label class="form-label" for="cust-referral">Kode Referral (Opsional)</label>
+                  <input type="text" id="cust-referral" name="referral_code" class="form-control"
+                    placeholder="Contoh: NCH-RAFI" maxlength="50" autocomplete="off">
+                  <small style="color: var(--text-muted); font-size: 12px;">Punya kode referral dari teman? Masukkan di
+                    sini untuk konfirmasi komisi manual oleh admin.</small>
                 </div>
 
                 <div class="form-group">
@@ -219,6 +265,7 @@
       document.getElementById('cart-content-view').style.display = 'block';
 
       renderItemsList(items);
+      syncAddonControls(items);
 
       const zoneSelect = document.getElementById('delivery-zone');
       const zoneId = currentMethod === 'delivery' && zoneSelect ? zoneSelect.value : null;
@@ -379,6 +426,81 @@
       }
     }
 
+    function addAddon(addonId) {
+      const ctrl = document.querySelector(`[data-addon-control="${addonId}"]`);
+      if (!ctrl) return;
+      Cart.add({
+        id: Number(ctrl.dataset.id),
+        type: 'product',
+        name: ctrl.dataset.name,
+        price: Number(ctrl.dataset.price),
+        quantity: 1,
+        image: ctrl.dataset.image
+      });
+      recalculate();
+    }
+
+    function changeAddonQty(addonId, delta) {
+      const items = Cart.get();
+      const idx = items.findIndex(i => i.type === 'product' && Number(i.id) === Number(addonId) && !i.variant);
+      if (idx === -1) {
+        if (delta > 0) addAddon(addonId);
+        return;
+      }
+      Cart.updateQty(idx, items[idx].quantity + delta);
+      recalculate();
+    }
+
+    function syncAddonControls(items) {
+      const controls = document.querySelectorAll('[data-addon-control]');
+      if (!controls.length) return;
+
+      controls.forEach(ctrl => {
+        const id = Number(ctrl.dataset.id);
+        const card = ctrl.closest('.addon-item');
+        const found = items.find(i => i.type === 'product' && Number(i.id) === id && !i.variant);
+        const qty = found ? found.quantity : 0;
+
+        if (card) card.classList.toggle('in-cart', qty > 0);
+        ctrl.innerHTML = '';
+
+        if (qty > 0) {
+          const stepper = document.createElement('div');
+          stepper.className = 'addon-stepper';
+
+          const minus = document.createElement('button');
+          minus.type = 'button';
+          minus.className = 'addon-step-btn';
+          minus.setAttribute('aria-label', `Kurangi ${ctrl.dataset.name}`);
+          minus.textContent = '-';
+          minus.onclick = () => changeAddonQty(id, -1);
+
+          const count = document.createElement('span');
+          count.className = 'addon-step-qty';
+          count.textContent = qty;
+
+          const plus = document.createElement('button');
+          plus.type = 'button';
+          plus.className = 'addon-step-btn';
+          plus.setAttribute('aria-label', `Tambah ${ctrl.dataset.name}`);
+          plus.textContent = '+';
+          plus.onclick = () => changeAddonQty(id, 1);
+
+          stepper.appendChild(minus);
+          stepper.appendChild(count);
+          stepper.appendChild(plus);
+          ctrl.appendChild(stepper);
+        } else {
+          const btn = document.createElement('button');
+          btn.type = 'button';
+          btn.className = 'btn btn-outline btn-sm addon-btn';
+          btn.textContent = '+ Tambah';
+          btn.onclick = () => addAddon(id);
+          ctrl.appendChild(btn);
+        }
+      });
+    }
+
     function applyPromo() {
       const code = document.getElementById('promo-input').value.trim();
       currentPromoCode = code;
@@ -407,6 +529,7 @@
 
         const name = document.getElementById('cust-name').value.trim();
         const phone = document.getElementById('cust-phone').value.trim();
+        const referralCode = document.getElementById('cust-referral') ? document.getElementById('cust-referral').value.trim() : '';
         const notes = document.getElementById('cust-notes').value.trim();
         const address = currentMethod === 'delivery' ? document.getElementById('cust-address').value.trim() : null;
         const zoneSelect = document.getElementById('delivery-zone');
@@ -440,6 +563,7 @@
             body: JSON.stringify({
               customer_name: name,
               customer_phone: phone,
+              referral_code: referralCode,
               notes: notes,
               method: currentMethod,
               address: address,

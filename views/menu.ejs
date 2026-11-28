@@ -16,7 +16,7 @@
         const activeDrinks = products.filter(x => x.category_id === 3 && x.available === 1 && !x.archived);
         const activeBundlingProds = products.filter(x => x.category_id === 4 && x.available === 1 && !x.archived);
         const activeBundles = (typeof bundles !== 'undefined' && Array.isArray(bundles)) ? bundles.filter(b => b.available === 1 && !b.archived) : [];
-        const hasOtherCat = products.filter(x => ![1, 2, 3, 4].includes(x.category_id) && x.available === 1 && !x.archived);
+        const hasOtherCat = products.filter(x => ![1, 2, 3, 4, 5].includes(x.category_id) && x.available === 1 && !x.archived);
         const mainSeries = [...activeNachos, ...hasOtherCat];
       %>
 
